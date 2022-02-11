@@ -1,0 +1,169 @@
+import bcrypt
+from peewee import *
+from playhouse.db_url import connect
+from cator import DatabaseProxy
+
+from config import GeneralConfig
+
+db = connect(GeneralConfig.DATABASE_URL)
+db_proxy = DatabaseProxy(db)
+
+class UnknownField(object):
+    def __init__(self, *_, **__): pass
+
+
+class BaseModel(Model):
+    class Meta:
+        database = db
+
+
+class Admin(BaseModel):
+    created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+    email = CharField(unique=True)
+    last_logged_at = DateTimeField(null=True)
+    password = CharField(null=True)
+    username = CharField()
+
+    def check_password(self, password):
+        return bcrypt.checkpw(bytes(password, encoding='utf8'), bytes(self.password, encoding='utf8'))
+
+    class Meta:
+        table_name = 'admins'
+
+
+class Team(BaseModel):
+    created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+    description = TextField(null=True)
+    gender = IntegerField(null=True)
+    updated_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+
+    class Meta:
+        table_name = 'teams'
+
+
+class Student(BaseModel):
+    contact = TextField(null=True)
+    created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+    gender = IntegerField(null=True)
+    id = BigAutoField()
+    last_logged_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+    name = CharField()
+    password = CharField()
+    team = ForeignKeyField(backref="students", column_name='team_id', field='id', model=Team, null=True)
+
+    def check_password(self, password):
+        return bcrypt.checkpw(bytes(password, encoding='utf8'), bytes(self.password, encoding='utf8'))
+
+    class Meta:
+        table_name = 'students'
+
+
+class CustomQuestionnaireItem(BaseModel):
+    created_at = DateTimeField(null=True)
+    id = IntegerField(null=True)
+    index = IntegerField(null=True)
+    params = TextField(null=True)
+    student = ForeignKeyField(column_name='student_id', backref='custom_questionnaire_items', field='id',
+                              model=Student, null=True)
+    title = TextField(null=True)
+    type = CharField(null=True)
+    updated_at = DateTimeField(null=True)
+
+    class Meta:
+        table_name = 'custom_questionnaire_items'
+        primary_key = False
+
+
+class CustomQuestionnaireAnswer(BaseModel):
+    answer = TextField(null=True)
+    created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+    item = ForeignKeyField(column_name='item_id', field='id', model=CustomQuestionnaireItem, null=True)
+    student = ForeignKeyField(column_name='student_id', backref='questionnaire_answers', field='id', model=Student,
+                              null=True)
+
+    class Meta:
+        table_name = 'questionnaire_answers'
+
+
+class ExchangingNeed(BaseModel):
+    created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+    expectation = TextField(null=True)
+    processed = IntegerField(constraints=[SQL("DEFAULT 0")], null=True)
+    reason = TextField(null=True)
+    student = ForeignKeyField(column_name='student_id', backref='exchanging_need', field='id', model=Student,
+                              null=True)
+
+    class Meta:
+        table_name = 'exchanging_needs'
+
+
+class ExchangingRequest(BaseModel):
+    created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+    from_student = ForeignKeyField(backref='created_exchanging_requests', column_name='from_student_id', field='id',
+                                   model=Student, null=True)
+    status = IntegerField(constraints=[SQL("DEFAULT 0")], null=True)
+    to_student = ForeignKeyField(backref='received_exchanging_requests', column_name='to_student_id', field='id',
+                                 model=Student, null=True)
+    updated_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+
+    class Meta:
+        table_name = 'exchanging_requests'
+
+
+class MatchingScore(BaseModel):
+    created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+    from_student = ForeignKeyField(backref='created_matching_scores', column_name='from_student_id', field='id',
+                                   model=Student)
+    score = IntegerField()
+    to_student = ForeignKeyField(backref='received_matching_scores', column_name='to_student_id', field='id',
+                                 model=Student)
+
+    class Meta:
+        table_name = 'matching_scores'
+
+
+class QuestionnaireItem(BaseModel):
+    created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+    data_type = CharField(constraints=[SQL("DEFAULT 'integer'")], null=True)
+    index = IntegerField(constraints=[SQL("DEFAULT 1")], null=True)
+    params = TextField(null=True)
+    title = TextField()
+    type = CharField(constraints=[SQL("DEFAULT 'text'")])
+    weight = IntegerField(constraints=[SQL("DEFAULT 1")])
+    updated_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+
+    class Meta:
+        table_name = 'questionnaire_items'
+
+
+class QuestionnaireAnswer(BaseModel):
+    answer = TextField(null=True)
+    weight = IntegerField(constraints=[SQL("DEFAULT 1")])
+    created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+    item = ForeignKeyField(column_name='item_id', field='id', model=QuestionnaireItem, null=True)
+    student = ForeignKeyField(column_name='student_id', backref='questionnaire_answers', field='id', model=Student,
+                              null=True)
+
+    class Meta:
+        table_name = 'questionnaire_answers'
+
+
+class SystemSetting(BaseModel):
+    created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+    key = CharField(unique=True)
+    updated_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+    value = TextField(null=True)
+
+    class Meta:
+        table_name = 'system_settings'
+
+
+class TeamRequest(BaseModel):
+    approved = IntegerField(constraints=[SQL("DEFAULT 0")], null=True)
+    created_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+    student = ForeignKeyField(backref="team_requests", column_name='student_id', field='id', model=Student, null=True)
+    team = ForeignKeyField(backref='team_requests', column_name='team_id', field='id', model=Team, null=True)
+    updated_at = DateTimeField(constraints=[SQL("DEFAULT CURRENT_TIMESTAMP")], null=True)
+
+    class Meta:
+        table_name = 'team_requests'

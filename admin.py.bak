@@ -1,0 +1,300 @@
+from functools import wraps
+
+import bcrypt
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import create_access_token, verify_jwt_in_request, get_jwt
+from peewee import JOIN
+from playhouse.shortcuts import model_to_dict
+
+from models import Admin, Student, Team, SystemSetting, QuestionnaireItem, QuestionnaireAnswer, MatchingScore, \
+    TeamRequest
+
+admin_pages = Blueprint('admin_pages', __name__, template_folder="templates/admin")
+
+
+def admin_required():
+    def wrapper(fn):
+        @wraps(fn)
+        def decorator(*args, **kwargs):
+            verify_jwt_in_request()
+            claims = get_jwt()
+            if claims["role"] == "admin":
+                return fn(*args, **kwargs)
+            else:
+                return jsonify({
+                    "code": 403,
+                    "msg": "无权限！"
+                }), 403
+
+        return decorator
+
+    return wrapper
+
+
+@admin_pages.route('/login', methods=['POST'])
+def login():
+    if request.json is not None:
+        email = request.json.get('email', None)
+        password = request.json.get('password', None)
+        user = Admin.get_or_none(Admin.email == email)
+        if user is not None and user.check_password(password):
+            token = create_access_token(identity=user.id, additional_headers={
+                "role": "admin"
+            }, additional_claims={
+                "role": "admin"
+            })
+
+            return jsonify({
+                "code": 200,
+                "msg": "登录成功！",
+                "data": {
+                    "token": token
+                }
+            })
+
+    return jsonify({
+        "code": 401,
+        "msg": "邮箱地址或密码错误！"
+    })
+
+
+@admin_pages.route("/student/list")
+@admin_required()
+def student_list():
+    students = Student.select(Student.id, Student.name, Student.gender, Student.created_at,
+                              Student.last_logged_at, Team) \
+        .join(Team, JOIN.LEFT_OUTER)
+
+    students = [model_to_dict(student) for student in students]
+
+    return jsonify({
+        "code": 200,
+        "data": {
+            "students": students
+        }
+    })
+
+
+@admin_pages.route("/student/import", methods=['POST'])
+@admin_required()
+def student_import():
+    if request.json is not None and request.json.get("students", None) is not None:
+        students = request.json.get("students")
+
+        data_to_store = []
+        for student in students:
+            # 导入时要把学生姓名里的空格替换为#
+            id, name, gender, password = student.split(maxsplit=3)
+            name = name.replace("#", " ")
+            password = password
+
+            data_to_store.append({
+                "id": id,
+                "name": name,
+                "gender": gender,
+                "password": bcrypt.hashpw(bytes(password, encoding="utf8"), bcrypt.gensalt())
+            })
+
+        count = Student.insert_many(data_to_store).execute()
+
+        return jsonify({
+            "code": 200,
+            "count": count,
+            "msg": "导入成功"
+        })
+
+    return jsonify({
+        "code": 406,
+        "msg": "获取数据失败"
+    })
+
+
+@admin_pages.route("/student/update", methods=['POST'])
+@admin_required()
+def student_update():
+    if request.json is not None:
+        student_id = request.json.get('student_id')
+        name = request.json.get('name')
+        contact = request.json.get('contact')
+        gender = request.json.get('gender')
+        password = request.json.get('password', None)
+        team_id = request.json.get('team_id', None)
+        student = Student.get_or_none(Student.id == student_id)
+
+        if student is not None:
+            student.name = name
+            student.contact = contact
+            student.gender = gender
+            student.team_id = team_id
+
+            if password is not None:
+                hashed_password = bcrypt.hashpw(bytes(password, encoding='utf8'), bcrypt.gensalt())
+                student.password = hashed_password
+
+            student.save()
+
+            return jsonify({
+                "code": 200,
+                "msg": "更新成功！"
+            })
+
+    return jsonify({
+        "code": 500,
+        "msg": "更新失败"
+    })
+
+
+@admin_pages.get('/student/info')
+@admin_required()
+def student_info():
+    if request.json is not None:
+        id = request.json.get('student_id', None)
+        student = Student.get_or_none(Student.id == id)
+        if student is not None:
+            return jsonify({
+                "code": 200,
+                "msg": "succeess",
+                "data": model_to_dict(student, backrefs=True, max_depth=1, exclude=[Student.password])
+            })
+
+    return jsonify({
+        "code": 404,
+        "msg": "学生不存在"
+    })
+
+
+@admin_pages.delete('/student/delete')
+@admin_required()
+def student_delete():
+    if request.json is not None:
+        id = request.json.get('student_id', None)
+        student = Student.get_or_none(Student.id == id)
+        if student is not None:
+            student.delete_instance()
+
+    return jsonify({
+        "code": 200,
+        "msg": "succeess"
+    })
+
+
+@admin_pages.get('/system_setting/list')
+@admin_required()
+def system_setting_list():
+    system_settings = SystemSetting.select()
+    system_settings = [model_to_dict(system_setting) for system_setting in system_settings]
+
+    return jsonify({
+        "code": 200,
+        "msg": "success",
+        "data": system_settings
+    })
+
+
+@admin_pages.post('/system_setting/update')
+@admin_required()
+def system_setting_update():
+    if request.json is not None:
+        for key, value in request.json.items():
+            item_in_db = SystemSetting.get_or_none(SystemSetting.key == key)
+            if item_in_db is not None:
+                item_in_db.value = value
+                item_in_db.save()
+
+            else:
+                SystemSetting.create(key=key, value=value)
+
+    return jsonify({
+        "code": 200,
+        "msg": "success"
+    })
+
+
+@admin_pages.delete('/system_setting/delete')
+@admin_required()
+def system_setting_delete():
+    if request.json is not None:
+        key = request.json.get('key', None)
+        item = SystemSetting.get_or_none(SystemSetting.key == key)
+
+        if item is not None:
+            item.delete_instance()
+
+    return jsonify({
+        "code": 200,
+        "msg": "success"
+    })
+
+
+@admin_pages.get('/questionnaire/list')
+@admin_required()
+def questionnaire_list():
+    questionnaire_items = QuestionnaireItem.select().order_by(QuestionnaireItem.index.desc())
+
+    questionnaire_items = [model_to_dict(questionnaire_item) for questionnaire_item in questionnaire_items]
+
+    return jsonify({
+        "code": 200,
+        "msg": "success",
+        "data": questionnaire_items
+    })
+
+
+@admin_pages.post('/questionnaire/set')
+@admin_required()
+def questionnaire_set():
+    if request.json is not None:
+        # 删除所有的匹配分
+        MatchingScore.delete().execute()
+
+        # 删除所有的问卷答案
+        QuestionnaireAnswer.delete().execute()
+
+        # 删除所有问卷
+        QuestionnaireItem.delete().execute()
+
+        # 重新写入
+        count = QuestionnaireItem.insert_many(request.json).execute()
+
+        return jsonify({
+            "code": 200,
+            "msg": "success",
+            "count": count
+        })
+
+
+@admin_pages.get('/team/list')
+@admin_required()
+def team_list():
+    teams = Team.select(Team, Student).join(Student)
+
+    teams = [model_to_dict(team, exclude=[TeamRequest, Student.password]) for team in teams]
+
+    return jsonify({
+        "code": 200,
+        "msg": "success",
+        "data": teams
+    })
+
+
+@admin_pages.get('/team/info')
+@admin_required()
+def team_info():
+    if request.json is not None:
+        team_id = request.json.get("team_id", None)
+        members = Student.alias()
+        team = Team.select(Team, TeamRequest, Student).where(
+            Team.id == team_id).join(members, JOIN.LEFT_OUTER).switch(Team).join(TeamRequest, JOIN.LEFT_OUTER).join(
+            Student, JOIN.LEFT_OUTER).get()
+
+        team_dict = model_to_dict(team)
+
+        team_dict['students'] = [model_to_dict(student, exclude=[Student.password, Team]) for student in team.students]
+        team_dict['team_requests'] = [model_to_dict(team_request, exclude=[Student.password, Team]) for team_request in
+                                      team.team_requests]
+
+        return jsonify({
+            "code": 200,
+            "msg": "success",
+            "data": team_dict
+        })
