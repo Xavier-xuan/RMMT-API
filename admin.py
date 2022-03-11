@@ -1,10 +1,10 @@
 import datetime
+import json
 from functools import wraps
 
 import bcrypt
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, verify_jwt_in_request, get_jwt, current_user
-from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
 from database import db_session
@@ -254,6 +254,74 @@ def student_info():
     })
 
 
+@admin_pages.post('/student/questionnaire')
+@admin_required()
+def student_questionnaire():
+    if request.json is not None:
+        id = request.json.get('student_id', None)
+        questionnaire_answers = request.json.get('questionnaire_answers')
+
+        if type(questionnaire_answers) is not dict:
+            return jsonify({
+                "code": 400,
+                "msg": "问卷答案数据错误"
+            })
+        student = db_session.query(Student).get(id)
+        if student is None:
+            return jsonify({
+                "code": 404,
+                "msg": "学生不存在"
+            })
+
+        exist_answers = student.questionnaire_answers
+        questionnaire_items = db_session.query(QuestionnaireItem).all()
+        default_weight = {}
+        missed_items = []
+        for questionnaire_item in questionnaire_items:
+            default_weight[questionnaire_item.id] = questionnaire_item.weight
+
+        bulk_save_models = []
+        for key in questionnaire_answers.keys():
+            value = questionnaire_answers[key]
+            if key not in default_weight.keys():
+                # 找不对对应item 存个屁
+                missed_items.append((key, value))
+                continue
+
+            need_to_create = True
+
+            # 对已存在的答案进行修改 一般只会用到这一个
+            data_changed = False
+            for exist_answer in exist_answers:
+                if exist_answer.item_id == key:
+                    need_to_create = False
+                    if exist_answer.answer != str(value['answer']) or exist_answer.weight != value['weight']:
+                        exist_answer.answer = str(value['answer'])
+                        exist_answer.weight = value['weight']
+                        exist_answer.updated_at = datetime.datetime.now()
+                        data_changed = True
+
+            if need_to_create:
+                new_answer = QuestionnaireAnswer(item_id=key, answer=str(value['answer']), student_id=id,
+                                                 weight=value['weight'])
+                bulk_save_models.append(new_answer)
+                data_changed = True
+
+        # 重头戏 存数据
+
+        if data_changed:
+            db_session.bulk_save_objects(bulk_save_models)
+            db_session.commit()
+
+        return jsonify({
+            "code": 200,
+            "msg": "success",
+            "data": {
+                "fail_to_save": missed_items
+            }
+        })
+
+
 @admin_pages.delete('/student/delete')
 @admin_required()
 def student_delete():
@@ -386,7 +454,7 @@ def questionnaire_set():
         for piece in request.json:
             title = piece.get('title', None)
             weight = piece.get('weight', None)
-            data_type = piece.get('date_type', None)
+            data_type = piece.get('data_type', None)
             params = piece.get('params', "{}")
             index = piece.get('index', None)
             id = piece.get('id', None)

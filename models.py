@@ -315,6 +315,7 @@ class QuestionnaireAnswer(Base, SerializerMixin):
     item_id = Column(ForeignKey('questionnaire_items.id', ondelete='CASCADE', onupdate='CASCADE'), index=True)
     answer = Column(Text)
     created_at = Column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
+    updated_at = Column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
     student_id = Column(ForeignKey('students.id', ondelete='CASCADE', onupdate='CASCADE'), index=True)
     weight = Column(INTEGER(11), nullable=False, server_default=text("'1'"))
 
