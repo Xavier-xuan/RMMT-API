@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, get_jwt, create_access_token, get_jwt_identity, set_access_cookies
+from flask_talisman import Talisman
+
 from config import GeneralConfig
 from database import db_session
 from admin import admin_pages
@@ -12,6 +14,9 @@ from student import student_pages
 app = Flask(__name__)
 app.config.from_object(GeneralConfig)
 jwt = JWTManager(app)
+
+# security headers
+Talisman(app)
 
 app.register_blueprint(admin_pages, url_prefix="/api/admin")
 app.register_blueprint(student_pages, url_prefix="/api/student")

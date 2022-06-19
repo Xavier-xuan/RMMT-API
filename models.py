@@ -4,7 +4,7 @@ from copy import deepcopy
 import bcrypt
 from flask import jsonify
 from sqlalchemy import Column, DateTime, ForeignKey, String, TIMESTAMP, Text, text
-from sqlalchemy.dialects.mysql import BIGINT, INTEGER, TINYINT
+from sqlalchemy.dialects.mysql import BIGINT, INTEGER, TINYINT, DOUBLE
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy_serializer import SerializerMixin
@@ -34,7 +34,7 @@ class QuestionnaireItem(Base, SerializerMixin):
 
     id = Column(String(128), primary_key=True)
     title = Column(Text, nullable=False)
-    weight = Column(INTEGER(11), nullable=False, server_default=text("'1'"))
+    weight = Column(DOUBLE(), nullable=False, server_default=text("'1'"))
     data_type = Column(String(32), server_default=text("'integer'"))
     params = Column(Text)
     updated_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
@@ -317,7 +317,7 @@ class QuestionnaireAnswer(Base, SerializerMixin):
     created_at = Column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
     updated_at = Column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
     student_id = Column(ForeignKey('students.id', ondelete='CASCADE', onupdate='CASCADE'), index=True)
-    weight = Column(INTEGER(11), nullable=False, server_default=text("'1'"))
+    weight = Column(DOUBLE(), nullable=False, server_default=text("'1'"))
 
     item = relationship('QuestionnaireItem', order_by="asc(QuestionnaireItem.index)",
                         primaryjoin='QuestionnaireItem.id == QuestionnaireAnswer.item_id')

@@ -1,15 +1,16 @@
 import datetime
-import json
 from functools import wraps
 
 import bcrypt
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token, verify_jwt_in_request, get_jwt, current_user
+from flask_jwt_extended import create_access_token, verify_jwt_in_request, get_jwt, current_user, jwt_required, \
+    create_refresh_token, get_jwt_identity
 from sqlalchemy.orm import joinedload
 
 from database import db_session
 from models import Admin, Student, Team, ExchangingNeed, CustomQuestionnaireItem, SystemSetting, QuestionnaireItem, \
-    MatchingScore, QuestionnaireAnswer, TeamRequest, TeamInvitation, get_system_setting
+    MatchingScore, QuestionnaireAnswer, TeamRequest, TeamInvitation, get_system_setting, CustomQuestionnaireAnswer, \
+    ExchangingRequest
 
 admin_pages = Blueprint('admin_pages', __name__, template_folder="templates/admin")
 
@@ -42,7 +43,12 @@ def login():
         if admin is not None and admin.check_password(password):
             admin.last_logged_at = datetime.datetime.now()
             db_session.commit()
-            token = create_access_token(identity=admin.id, additional_headers={
+            access_token = create_access_token(identity=admin.id, additional_headers={
+                "role": "admin"
+            }, additional_claims={
+                "role": "admin"
+            })
+            refresh_token = create_refresh_token(identity=admin.id, additional_headers={
                 "role": "admin"
             }, additional_claims={
                 "role": "admin"
@@ -52,7 +58,8 @@ def login():
                 "code": 200,
                 "msg": "success",
                 "data": {
-                    "token": token
+                    "access_token": access_token,
+                    "refresh_token": refresh_token
                 }
             })
 
@@ -71,11 +78,25 @@ def logout():
     })
 
 
-@admin_pages.post('/token/refresh')
-def token_refresh():
+@admin_pages.route("/refresh", methods=["POST"])
+@jwt_required(refresh=True)
+def refresh():
+    claims = get_jwt()
+    if not claims["role"] == "admin":
+        return jsonify({
+            "code": 403,
+            "msg": "无权限！"
+        }), 403
+
+    identity = get_jwt_identity()
+    access_token = create_access_token(identity=identity)
+
     return jsonify({
         "code": 200,
-        "msg": "success"
+        "msg": "success",
+        "data": {
+            "access_token": access_token
+        }
     })
 
 
@@ -480,6 +501,61 @@ def questionnaire_set():
             "code": 200,
             "msg": "success"
         })
+
+
+@admin_pages.post('/system_reset/perform')
+@admin_required()
+# @jwt_required(fresh=True)
+def system_reset():
+    if request.json is None:
+        return jsonify({
+            "code": 400,
+            "msg": "密码不能为空"
+        })
+
+    password = request.json.get("password")
+
+    # check_password
+    if not current_user.check_password(password):
+        return jsonify({
+            "code": 400,
+            "msg": "密码错误"
+        })
+
+    # 删除matching scores
+    db_session.query(MatchingScore).delete()
+
+    # 删除所有自定义问卷答案
+    db_session.query(CustomQuestionnaireAnswer).delete()
+
+    # 删除所有自定义问卷
+    db_session.query(CustomQuestionnaireItem).delete()
+
+    # 删除所有问卷答案
+    db_session.query(QuestionnaireAnswer).delete()
+
+    # 删除所有组队邀请信息
+    db_session.query(TeamInvitation).delete()
+
+    # 删除所有组队请求
+    db_session.query(TeamRequest).delete()
+
+    # 删除所有组队信息
+    db_session.query(Team).delete()
+
+    # 删除所有交换请求
+    db_session.query(ExchangingNeed).delete()
+    db_session.query(ExchangingRequest).delete()
+
+    # 删除所有学生账号
+    db_session.query(Student).delete()
+
+    db_session.commit()
+
+    return jsonify({
+        "code": 200,
+        "msg": "success"
+    })
 
 
 @admin_pages.get('/team/list')
