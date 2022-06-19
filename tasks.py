@@ -7,6 +7,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 from sqlalchemy.orm import joinedload
 
+import config
 from models import *
 
 
@@ -177,6 +178,6 @@ if __name__ == '__main__':
         'max_instances': 1
     })
 
-    scheduler.add_job(scan_students, "interval", seconds=10)
+    scheduler.add_job(scan_students, "interval", seconds=config.GeneralConfig.ASYNC_JOB_SCAN_INTERVAL)
 
     scheduler.start()
