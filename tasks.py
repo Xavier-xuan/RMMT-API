@@ -24,10 +24,12 @@ def scan_students():
         .group_by(Student).all()
 
     students = [student for student in students if student.has_answered_questionnaire()]
-    student_ids = [];
+    student_ids = []
+    student_ids[1] = []  # male
+    student_ids[2] = []  # female
 
     for student in students:
-        student_ids.append(student.id)
+        student_ids[student.gender].append(student.id)
 
     for student in students:
         print("正在检测学生 {}({}) 的匹配列表是否完整".format(student.name, student.id))
@@ -42,7 +44,7 @@ def scan_students():
         matching_scores = []
 
         # compare
-        for target_student_id in student_ids:
+        for target_student_id in student_ids[student.gender]:
             if target_student_id not in existed_ids:
                 if target_student_id == student.id:
                     continue

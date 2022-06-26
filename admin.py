@@ -3,8 +3,7 @@ from functools import wraps
 
 import bcrypt
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token, verify_jwt_in_request, get_jwt, current_user, jwt_required, \
-    create_refresh_token, get_jwt_identity
+from flask_jwt_extended import create_access_token, verify_jwt_in_request, get_jwt, current_user
 from sqlalchemy.orm import joinedload
 
 from database import db_session
@@ -48,18 +47,12 @@ def login():
             }, additional_claims={
                 "role": "admin"
             })
-            refresh_token = create_refresh_token(identity=admin.id, additional_headers={
-                "role": "admin"
-            }, additional_claims={
-                "role": "admin"
-            })
 
             return jsonify({
                 "code": 200,
                 "msg": "success",
                 "data": {
-                    "access_token": access_token,
-                    "refresh_token": refresh_token
+                    "access_token": access_token
                 }
             })
 
@@ -75,28 +68,6 @@ def logout():
     return jsonify({
         "code": 200,
         "msg": "success"
-    })
-
-
-@admin_pages.route("/refresh", methods=["POST"])
-@jwt_required(refresh=True)
-def refresh():
-    claims = get_jwt()
-    if not claims["role"] == "admin":
-        return jsonify({
-            "code": 403,
-            "msg": "无权限！"
-        }), 403
-
-    identity = get_jwt_identity()
-    access_token = create_access_token(identity=identity)
-
-    return jsonify({
-        "code": 200,
-        "msg": "success",
-        "data": {
-            "access_token": access_token
-        }
     })
 
 

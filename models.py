@@ -320,7 +320,7 @@ class QuestionnaireAnswer(Base, SerializerMixin):
     weight = Column(DOUBLE(), nullable=False, server_default=text("'1'"))
 
     item = relationship('QuestionnaireItem', order_by="asc(QuestionnaireItem.index)",
-                        primaryjoin='QuestionnaireItem.id == QuestionnaireAnswer.item_id')
+                        primaryjoin='QuestionnaireItem.id == QuestionnaireAnswer.item_id', lazy='joined')
 
 
 class TeamRequest(Base, SerializerMixin):
@@ -334,10 +334,10 @@ class TeamRequest(Base, SerializerMixin):
     created_at = Column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
     updated_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
 
-    serialize_rules = ('-student',)
+    serialize_rules = ['-student', '-team']
 
 
-class TeamInvitation(Base):
+class TeamInvitation(Base, SerializerMixin):
     __tablename__ = 'team_invitations'
 
     id = Column(INTEGER(11), primary_key=True)

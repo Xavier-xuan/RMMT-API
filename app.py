@@ -58,7 +58,7 @@ def refresh_expiring_jwts(response):
     try:
         exp_timestamp = get_jwt()["exp"]
         now = datetime.now()
-        target_timestamp = datetime.timestamp(now + timedelta(minutes=3))
+        target_timestamp = datetime.timestamp(now + timedelta(minutes=10))
         if target_timestamp > exp_timestamp:
             access_token = create_access_token(identity=get_jwt_identity(), additional_headers={
                 "role": get_jwt()['role']

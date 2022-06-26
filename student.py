@@ -1,6 +1,7 @@
 import datetime
 from functools import wraps
 
+import bcrypt
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, verify_jwt_in_request, get_jwt, current_user
 from sqlalchemy.orm import joinedload
@@ -43,7 +44,7 @@ def in_step_1_period():
                 return jsonify({
                     "code": "400",
                     "msg": "未到个人信息补充系统开放时间"
-                }), 400
+                }), 200
 
         return decorator
 
@@ -62,7 +63,7 @@ def in_step_2_period():
                 return jsonify({
                     "code": "400",
                     "msg": "未到异步系统开放时间"
-                }), 400
+                }), 200
 
         return decorator
 
@@ -81,7 +82,7 @@ def in_step_3_period():
                 return jsonify({
                     "code": "400",
                     "msg": "未到舍友双选系统开放时间"
-                }), 400
+                }), 200
 
         return decorator
 
@@ -107,13 +108,36 @@ def login():
                 "code": 200,
                 "msg": "登录成功！",
                 "data": {
-                    "token": token
+                    "access_token": token
                 }
             })
 
     return jsonify({
         "code": 401,
-        "msg": "邮箱地址或密码错误！"
+        "msg": "ID 或密码错误！"
+    })
+
+
+@student_pages.get("/userinfo")
+@student_required()
+def userinfo():
+    return jsonify({
+        "code": 200,
+        "msg": "success",
+        "data": {
+            "user": current_user.to_dict(
+                only=['id', 'name', 'gender', 'team_id', 'team.id', 'team.students.id', 'team.students.name',
+                      'has_answered_questionnaire'])
+        }
+    })
+
+
+@student_pages.post('/logout')
+@student_required()
+def logout():
+    return jsonify({
+        "code": 200,
+        "msg": "success"
     })
 
 
@@ -134,7 +158,8 @@ def questionnaire_list():
 @student_pages.get('/questionnaire/answer')
 @student_required()
 def questionnaire_get_answers():
-    questionnaire_answers = db_session.query(QuestionnaireAnswer).options(joinedload(QuestionnaireAnswer.item)).all()
+    questionnaire_answers = db_session.query(QuestionnaireAnswer).filter(
+        QuestionnaireAnswer.student_id == current_user.id).options(joinedload(QuestionnaireAnswer.item)).all()
 
     questionnaire_answers = [questionnaire_answer.to_dict(only=['item_id', 'answer', 'weight', 'item']) for
                              questionnaire_answer in questionnaire_answers]
@@ -150,25 +175,68 @@ def questionnaire_get_answers():
 @in_step_1_period()
 @student_required()
 def questionnaire_set_answers():
-    answer_models_list = []
     if request.json is not None:
-        for piece in request.json:
-            answer_models_list.append(
-                QuestionnaireAnswer(item_id=piece.get('item_id', None),
-                                    answer=piece.get('answer', None),
-                                    weight=piece.get('weight', None),
-                                    student_id=current_user.id)
-            )
-    # 删除原有答案
-    db_session.query(QuestionnaireAnswer).where(QuestionnaireAnswer.student_id == current_user.id).delete()
+        if type(request.json) is not dict:
+            return jsonify({
+                "code": 400,
+                "msg": "问卷答案数据错误"
+            })
 
-    # 删除匹配得分
-    db_session.query(MatchingScore).where(
-        (MatchingScore.to_student_id == current_user.id) | (MatchingScore.from_student_id == current_user.id)).delete()
-    # TODO: 加入计划任务 重新计算匹配得分
+        # TODO:: 整合到model里进行
+        questionnaire_answers = request.json
 
-    db_session.bulk_save_objects(answer_models_list)
-    db_session.commit()
+        exist_answers = db_session.query(QuestionnaireAnswer).filter(
+            QuestionnaireAnswer.student_id == current_user.id).all()
+        questionnaire_items = db_session.query(QuestionnaireItem).all()
+        default_weight = {}
+        missed_items = []
+        for questionnaire_item in questionnaire_items:
+            default_weight[questionnaire_item.id] = questionnaire_item.weight
+
+        bulk_save_models = []
+        for key in questionnaire_answers.keys():
+            value = questionnaire_answers[key]
+            if key not in default_weight.keys():
+                # 找不对对应item 存个屁
+                missed_items.append((key, value))
+                continue
+            elif default_weight[key] < 0:
+                value['weight'] = default_weight[key]
+
+            need_to_create = True
+
+            # 对已存在的答案进行修改 一般只会用到这一个
+
+            # TODO: 权重范围限制
+            # TODO: SQL性能调优
+            data_changed = False
+            for exist_answer in exist_answers:
+                if exist_answer.item_id == key:
+                    need_to_create = False
+                    if exist_answer.answer != str(value['answer']) or exist_answer.weight != value['weight']:
+                        exist_answer.answer = str(value['answer'])
+                        exist_answer.weight = value['weight']
+                        exist_answer.updated_at = datetime.datetime.now()
+                        db_session.commit()
+
+            if need_to_create:
+                new_answer = QuestionnaireAnswer(item_id=key, answer=str(value['answer']), student_id=id,
+                                                 weight=value['weight'])
+                bulk_save_models.append(new_answer)
+                data_changed = True
+
+        # 重头戏 存数据
+
+        if data_changed:
+            db_session.bulk_save_objects(bulk_save_models)
+            db_session.commit()
+
+            # 删除匹配得分
+            db_session.query(MatchingScore).where(
+                (MatchingScore.to_student_id == current_user.id) | (
+                        MatchingScore.from_student_id == current_user.id)).delete()
+
+            db_session.commit()
 
     return jsonify({
         "code": 200,
@@ -183,6 +251,7 @@ def team_recommend_teammates():
     recommend_scores = db_session.query(MatchingScore) \
         .where(MatchingScore.to_student_id == current_user.id) \
         .options(joinedload(MatchingScore.from_student)) \
+        .order_by(MatchingScore.score) \
         .all()
 
     construct_data = []
@@ -190,7 +259,7 @@ def team_recommend_teammates():
     for piece in recommend_scores:
         if piece.from_student.gender != current_user.gender:
             continue
-        item = piece.from_student.to_dict(only=['id', 'name'])
+        item = piece.from_student.to_dict(only=['id', 'name', 'contact'])
         # join load 不能执行关联查询 所以在这里手动过滤
 
         item['score'] = piece.score
@@ -202,7 +271,7 @@ def team_recommend_teammates():
         .where(Student.id.not_in(added_student_ids)) \
         .all()
 
-    students_with_no_score = [piece.to_dict(only=['id', 'name']) for piece in students_with_no_score]
+    students_with_no_score = [piece.to_dict(only=['id', 'name', 'contact']) for piece in students_with_no_score]
 
     return jsonify({
         "code": 200,
@@ -370,7 +439,7 @@ def team_request():
             if similar_invitation_count > 0:
                 return jsonify({
                     "code": 400,
-                    "msg": "你已经受到过这个队伍的邀请函了，请先处理邀请函"
+                    "msg": "你已经收到过这个队伍的邀请函了，请先处理邀请函"
                 })
 
             similar_request_count = db_session.query(TeamRequest) \
@@ -406,11 +475,18 @@ def team_request():
 @student_pages.get('/team/invitations')
 @student_required()
 def team_invitation_list():
-    team_invitations = db_session.query(TeamInvitation).where(TeamInvitation.to_student_id == current_user.id).options(
-        joinedload(TeamInvitation.team, TeamInvitation.from_student)).all()
+    # 返回自己发出去和收到的组队申请
+    team_invitations = db_session \
+        .query(TeamInvitation) \
+        .filter((TeamInvitation.to_student_id == current_user.id) | (TeamInvitation.from_student_id == current_user.id)) \
+        .options(
+        joinedload(TeamInvitation.from_student), joinedload(TeamInvitation.to_student), joinedload(TeamInvitation.team)) \
+        .order_by(TeamInvitation.id.desc()) \
+        .all()
 
     team_invitations = [team_invitation.to_dict(
-        only=['id, team_id', 'status', 'reason', 'created_at', 'from_student.name', 'from_student.id', 'team.id',
+        only=['id', 'team_id', 'status', 'reason', 'created_at', 'to_student.name', 'to_student.id',
+              'from_student.name', 'from_student.id', 'team.id',
               'team.description']) for
         team_invitation in team_invitations]
 
@@ -427,15 +503,39 @@ def team_invitation_list():
 @student_required()
 def team_request_list():
     if current_user.team_id is None:
+        # 如果没有入队，则返回申请列表
+
+        team_requests = db_session.query(TeamRequest) \
+            .filter(TeamRequest.student_id == current_user.id) \
+            .options(joinedload(TeamRequest.team), joinedload(TeamRequest.student)) \
+            .order_by(TeamRequest.id.desc()) \
+            .all()
+
+        team_requests = [team_request.to_dict(
+            ['id', 'team_id', 'team.id', 'team.description', 'reason', 'team.students.id', 'team.students.name',
+             'status', 'student.id', 'student.name', 'created_at']) for
+            team_request in
+            team_requests]
+
         return jsonify({
-            "code": 404,
-            "msg": "你还没有进入队伍"
+            "code": 200,
+            "msg": "success",
+            "data": {
+                "team_requests": team_requests
+            }
         })
 
-    team_requests = db_session.query(TeamRequest).where(TeamRequest.team_id == current_user.team_id).options(
-        joinedload(TeamRequest.student)).all()
+    team_requests = db_session \
+        .query(TeamRequest) \
+        .where(TeamRequest.team_id == current_user.team_id) \
+        .options(joinedload(TeamRequest.student)) \
+        .options(joinedload(TeamRequest.student)) \
+        .order_by(TeamRequest.id.desc()) \
+        .all()
 
-    team_requests = [team_request.to_dict(['id', 'status', 'student.id', 'student.name']) for team_request in
+    team_requests = [team_request.to_dict(['id', 'status', 'student.id', 'reason', 'student.name', 'created_at']) for
+                     team_request
+                     in
                      team_requests]
 
     return jsonify({
@@ -453,14 +553,18 @@ def team_request_list():
 def team_invitation_process():
     if request.json is not None:
         team_invitation_id = request.json.get("team_invitation_id", None)
-        accept = bool(request.json.get("accpet"))
+        accept = bool(request.json.get("accept"))
 
         team_invitation = db_session.query(
-            TeamInvitation).options(joinedload(TeamInvitation.from_student, TeamInvitation.to_student)).filter(
-            TeamInvitation.id == team_invitation_id).first()
+            TeamInvitation) \
+            .options(joinedload(TeamInvitation.from_student),
+                     joinedload(TeamInvitation.to_student)) \
+            .filter(TeamInvitation.id == team_invitation_id) \
+            .first()
 
         if team_invitation is not None:
-            if team_invitation.to_student_id is not current_user.id:
+            if (team_invitation.to_student_id != current_user.id) \
+                    and (team_invitation.from_student_id != current_user.id):
                 return jsonify({
                     "code": 403,
                     "msg": "无权操作"
@@ -472,14 +576,28 @@ def team_invitation_process():
                     "msg": "该邀请已被处理"
                 })
 
-            if not accept:
-                team_invitation.status = -1
+            if not accept and team_invitation.from_student.id == current_user.id:
+                team_invitation.status = -2
+                team_invitation.reason = "已被{}撤回".format(current_user.name)
                 db_session.commit()
                 return jsonify({
                     "code": 200,
                     "msg": "success"
                 })
 
+            elif not accept:
+                team_invitation.status = -1
+                team_invitation.reason = "已被{}拒绝".format(current_user.name)
+                db_session.commit()
+                return jsonify({
+                    "code": 200,
+                    "msg": "success"
+                })
+            elif accept and team_invitation.from_student.id == current_user.id:  # 防止自己给自己同意
+                return jsonify({
+                    "code": 403,
+                    "msg": "无权操作"
+                })
             else:
                 if team_invitation.team is None:
                     # 创建请求的时候已经进行性别校验
@@ -490,12 +608,12 @@ def team_invitation_process():
                     result = team_invitation.to_student.set_team(team.id)
                     if result is not True:
                         return result
-                    else:
-                        team_invitation.from_student.team_id = team.id
-                        team_invitation.to_student.team_id = team.id
-                        team_invitation.status = 1
-                        team_invitation.reason = "已创建新的队伍"
-                        db_session.commit()
+                    result = team_invitation.from_student.set_team(team.id)
+                    if result is not True:
+                        return result
+                    team_invitation.status = 1
+                    team_invitation.reason = "已创建新的队伍"
+                    db_session.commit()
 
                     return jsonify({
                         "code": 200,
@@ -552,7 +670,9 @@ def team_request_process():
 
         if team_request is not None:
             # 进行一大堆校验
-            if team_request.team_id is not current_user.team_id:
+            if (team_request.team_id != current_user.team_id \
+                and team_request.student_id != current_user.id) \
+                    or (accept and team_request.student.id == current_user.id):  # 防止自己给自己同意
                 return jsonify({
                     "code": 403,
                     "msg": "无权操作"
@@ -564,9 +684,17 @@ def team_request_process():
                     "msg": "该请求已被处理"
                 })
 
-            if not accept:
+            if not accept and team_request.student.id == current_user.id:
+                team_request.status = -2
+                team_request.reason = "已被{}撤回".format(current_user.name)
+                db_session.commit()
+                return jsonify({
+                    "code": 200,
+                    "msg": "success"
+                })
+            elif not accept:
                 team_request.status = -1
-                team_request.reason = "Refused by {}".format(current_user.name)
+                team_request.reason = "已被{}拒绝".format(current_user.name)
                 db_session.commit()
                 return jsonify({
                     "code": 200,
@@ -577,7 +705,7 @@ def team_request_process():
 
                 if result is True:
                     team_request.status = 1
-                    team_request.reason = "Accepted by {}".format(current_user.name)
+                    team_request.reason = "已被{}接受".format(current_user.name)
                     db_session.commit()
 
                     return jsonify({
@@ -596,3 +724,137 @@ def team_request_process():
         "code": 400,
         "msg": "数据校验错误"
     })
+
+
+@student_pages.get("/system_setting")
+@student_required()
+def get_system_settings():
+    return jsonify({
+        "code": 200,
+        "msg": "success",
+        "data": {
+            "step_1_start_at": get_system_setting("step_1_start_at"),
+            "step_1_end_at": get_system_setting("step_1_end_at"),
+            "step_2_start_at": get_system_setting("step_2_start_at"),
+            "step_2_end_at": get_system_setting("step_2_end_at"),
+            "step_3_start_at": get_system_setting("step_3_start_at"),
+            "step_3_end_at": get_system_setting("step_3_end_at"),
+            "team_max_student_count": get_system_setting("team_max_student_count"),
+            "questionnaire_json": get_system_setting("questionnaire_json", {})
+        }
+    })
+
+
+@student_pages.get("/student/<int:id>")
+@student_required()
+def get_student_detail(id):
+    # TODO:: 优化Questionnaire_item的 SQL
+    student = db_session.query(Student).filter(Student.id == id) \
+        .join(Team, QuestionnaireAnswer,
+              isouter=True) \
+        .first()
+
+    matching_score = db_session.query(MatchingScore) \
+        .filter(MatchingScore.from_student_id == student.id) \
+        .filter(MatchingScore.to_student_id == current_user.id) \
+        .first()
+
+    if matching_score is not None:
+        student.score = matching_score.score
+    else:
+        student.score = None
+
+    return jsonify({
+        "code": 200,
+        "msg": "success",
+        "data": student.to_dict(
+            only=['id', 'name', 'team', 'team_id', 'questionnaire_answers', 'contact', 'team.id', 'team.students.id',
+                  'team.students.name', 'team.students.contact', 'has_answered_questionnaire'])
+    })
+
+
+@student_pages.get("/team/detail")
+@student_required()
+def get_team_detail():
+    if current_user.team is None:
+        return jsonify({
+            "code": 400,
+            "msg": "你还没有加入任何队伍"
+        })
+    return jsonify({
+        "code": 200,
+        "msg": "success",
+        "data": current_user.team.to_dict(['id', 'description', 'students.id',
+                                           'students.name', 'students.contact', 'students.has_answered_questionnaire',
+                                           'students.questionnaire_answers'])
+    })
+
+
+@student_pages.post("/team/quit")
+@student_required()
+def quit_team():
+    if current_user.team is None:
+        return jsonify({
+            "code": 400,
+            "msg": "你还没有加入任何队伍"
+        })
+
+    result = current_user.set_team(None)
+    if result is not True:
+        return result
+
+    return jsonify({
+        "code": 200,
+        "msg": "success"
+    })
+
+
+@student_pages.post("/change_password")
+@student_required()
+def change_password():
+    if request.json is not None:
+        current_pw = request.json.get('current_password')
+        new_pw = request.json.get('new_password')
+        if len(new_pw) < 8:
+            return jsonify({
+                "code": 400,
+                "msg": "密码不能小于八位"
+            })
+        if not current_user.check_password(current_pw):
+            return jsonify({
+                "code": 400,
+                "msg": "旧密码不正确"
+            })
+
+        hashed_pw = bcrypt.hashpw(bytes(new_pw, encoding='utf8'), bcrypt.gensalt())
+        current_user.password = hashed_pw
+        db_session.commit()
+        return jsonify({
+            "code": 200,
+            "msg": "success"
+        })
+
+
+@student_pages.post("/update_contact")
+@student_required()
+def update_contact():
+    if request.json is not None:
+        new_contact = request.json.get("contact")
+        if new_contact is None:
+            return jsonify({
+                "code": 400,
+                "msg": "联系方式不能为空"
+            })
+
+        current_user.contact = new_contact
+        db_session.commit()
+        return jsonify({
+            "code": 200,
+            "msg": "success"
+        })
+
+    else:
+        return jsonify({
+            "code": 400,
+            "msg": "数据校验错误"
+        })
