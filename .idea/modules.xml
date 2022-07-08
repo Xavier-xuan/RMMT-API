@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/RoomateDispatcher.iml" filepath="$PROJECT_DIR$/.idea/RoomateDispatcher.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/Roommate Matcher API.iml" filepath="$PROJECT_DIR$/.idea/Roommate Matcher API.iml" />
     </modules>
   </component>
 </project>
