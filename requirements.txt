@@ -1,9 +1,10 @@
-Flask_JWT_Extended==4.3.1
-APScheduler==3.9.1
 SQLAlchemy==1.4.29
-flask_talisman==1.0.0
-arrow==1.2.2
-Flask==2.0.2
-Flask_Cors==3.0.10
 SQLAlchemy_serializer==1.4.1
-python_bcrypt==0.3.2
+Flask_Cors==3.0.10
+APScheduler==3.9.1
+arrow==1.2.2
+Flask_JWT_Extended==4.3.1
+Flask==2.0.2
+flask_talisman==1.0.0
+bcrypt==3.2.2
+PyMySQL==1.0.2

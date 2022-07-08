@@ -313,6 +313,12 @@ def team_invite():
                 "msg": "对方已经在其他队伍中了，不能撬墙角"
             })
 
+        if target_student_id == current_user.id:
+            return jsonify({
+                "code": 400,
+                "msg": "不能自己和自己组队"
+            })
+
         if team_id is not None:
             team = db_session.query(Team).get(team_id)
             if team is None:
