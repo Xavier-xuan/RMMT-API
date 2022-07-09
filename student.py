@@ -194,6 +194,7 @@ def questionnaire_set_answers():
             default_weight[questionnaire_item.id] = questionnaire_item.weight
 
         bulk_save_models = []
+        data_changed = False
         for key in questionnaire_answers.keys():
             value = questionnaire_answers[key]
             if key not in default_weight.keys():
@@ -209,7 +210,6 @@ def questionnaire_set_answers():
 
             # TODO: 权重范围限制
             # TODO: SQL性能调优
-            data_changed = False
             for exist_answer in exist_answers:
                 if exist_answer.item_id == key:
                     need_to_create = False

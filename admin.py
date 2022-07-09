@@ -273,17 +273,19 @@ def student_questionnaire():
             default_weight[questionnaire_item.id] = questionnaire_item.weight
 
         bulk_save_models = []
+        data_changed = False
         for key in questionnaire_answers.keys():
             value = questionnaire_answers[key]
             if key not in default_weight.keys():
                 # 找不对对应item 存个屁
                 missed_items.append((key, value))
                 continue
+            elif default_weight[key] < 0:
+                value['weight'] = default_weight[key]
 
             need_to_create = True
 
             # 对已存在的答案进行修改 一般只会用到这一个
-            data_changed = False
             for exist_answer in exist_answers:
                 if exist_answer.item_id == key:
                     need_to_create = False
@@ -291,10 +293,11 @@ def student_questionnaire():
                         exist_answer.answer = str(value['answer'])
                         exist_answer.weight = value['weight']
                         exist_answer.updated_at = datetime.datetime.now()
+                        db_session.commit()
                         data_changed = True
 
             if need_to_create:
-                new_answer = QuestionnaireAnswer(item_id=key, answer=str(value['answer']), student_id=id,
+                new_answer = QuestionnaireAnswer(item_id=key, answer=str(value['answer']), student_id=student.id,
                                                  weight=value['weight'])
                 bulk_save_models.append(new_answer)
                 data_changed = True
@@ -305,9 +308,10 @@ def student_questionnaire():
             db_session.bulk_save_objects(bulk_save_models)
             db_session.commit()
 
-            db_session.query(MatchingScore)\
-                .filter((MatchingScore.to_student_id == id) | (
-                        MatchingScore.from_student_id == id))\
+            # 删除匹配得分
+            db_session.query(MatchingScore) \
+                .filter((MatchingScore.to_student_id == student.id) | (
+                    MatchingScore.from_student_id == student.id)) \
                 .delete(synchronize_session=False)
 
             db_session.commit()
