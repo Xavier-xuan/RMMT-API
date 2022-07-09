@@ -305,6 +305,13 @@ def student_questionnaire():
             db_session.bulk_save_objects(bulk_save_models)
             db_session.commit()
 
+            db_session.query(MatchingScore)\
+                .filter((MatchingScore.to_student_id == id) | (
+                        MatchingScore.from_student_id == id))\
+                .delete(synchronize_session=False)
+
+            db_session.commit()
+
         return jsonify({
             "code": 200,
             "msg": "success",

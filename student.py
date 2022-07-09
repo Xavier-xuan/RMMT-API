@@ -232,9 +232,10 @@ def questionnaire_set_answers():
             db_session.commit()
 
             # 删除匹配得分
-            db_session.query(MatchingScore).where(
-                (MatchingScore.to_student_id == current_user.id) | (
-                        MatchingScore.from_student_id == current_user.id)).delete()
+            db_session.query(MatchingScore)\
+                .filter((MatchingScore.to_student_id == current_user.id) | (
+                        MatchingScore.from_student_id == current_user.id))\
+                .delete(synchronize_session=False)
 
             db_session.commit()
 
