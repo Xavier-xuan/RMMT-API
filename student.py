@@ -220,7 +220,7 @@ def questionnaire_set_answers():
                         db_session.commit()
 
             if need_to_create:
-                new_answer = QuestionnaireAnswer(item_id=key, answer=str(value['answer']), student_id=id,
+                new_answer = QuestionnaireAnswer(item_id=key, answer=str(value['answer']), student_id=current_user.id,
                                                  weight=value['weight'])
                 bulk_save_models.append(new_answer)
                 data_changed = True
