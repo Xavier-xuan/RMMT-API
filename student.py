@@ -218,6 +218,7 @@ def questionnaire_set_answers():
                         exist_answer.weight = value['weight']
                         exist_answer.updated_at = datetime.datetime.now()
                         db_session.commit()
+                        data_changed = True
 
             if need_to_create:
                 new_answer = QuestionnaireAnswer(item_id=key, answer=str(value['answer']), student_id=current_user.id,
