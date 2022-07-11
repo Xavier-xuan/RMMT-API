@@ -134,7 +134,7 @@ def calculate_score(from_student_answer, to_student_answer):
             end_difference = date_difference_in_days(start_answer_array[1], to_answer_array[1])
             return range_difference(start_difference, end_difference, to_student_answer.weight)
         elif data_type == "text_array":
-            return len(set(start_answer_array).difference(set(to_student_answer)))
+            return len(set(start_answer_array).difference(set(to_answer_array)))
 
     return 0
 
