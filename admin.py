@@ -1,3 +1,4 @@
+import copy
 import datetime
 from functools import wraps
 
@@ -136,7 +137,7 @@ def student_import():
 
         data_to_store = []
         students_id_in_store = [item[0] for item in db_session.query(Student.id).all()]
-        for student in students:
+        for student in copy.deepcopy(students):
             # 导入时要把学生姓名里的空格替换为#
             space_count = student.split()
             if len(space_count) != 4:
