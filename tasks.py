@@ -104,7 +104,7 @@ def calculate_score(from_student_answer, to_student_answer):
     if data_type == "number":
         try:
             from_answer = int(from_student_answer.answer.replace('"', ""))
-            to_answer = int(to_student_answer.replace('"', ""))
+            to_answer = int(to_student_answer.answer.replace('"', ""))
             difference = decimal.Decimal((from_answer - to_answer)) * to_student_answer.weight
             return math.pow(difference, 2)
         except ValueError:
