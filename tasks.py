@@ -102,10 +102,13 @@ def get_score(from_student, to_student):
 def calculate_score(from_student_answer, to_student_answer):
     data_type = from_student_answer.item.data_type;
     if data_type == "number":
-        from_answer = int(from_student_answer.answer)
-        to_answer = int(to_student_answer.answer)
-        difference = decimal.Decimal((from_answer - to_answer)) * to_student_answer.weight
-        return math.pow(difference, 2)
+        try:
+            from_answer = int(from_student_answer.answer.replace('"', ""))
+            to_answer = int(to_student_answer.replace('"', ""))
+            difference = decimal.Decimal((from_answer - to_answer)) * to_student_answer.weight
+            return math.pow(difference, 2)
+        except ValueError:
+            return 0
     elif data_type == "time":
         from_answer = from_student_answer.answer
         to_answer = to_student_answer.answer
@@ -173,8 +176,8 @@ def get_questionnaire_answer_by_item_id(item_id, questionnaire_answers):
 def is_in_calculating_time():
     start_time_string = db_session.query(SystemSetting.value).filter(SystemSetting.key == "step_2_start_at").first()[0]
     stop_time_string = db_session.query(SystemSetting.value).filter(SystemSetting.key == "step_2_end_at").first()[0]
-    start_time = arrow.get(start_time_string)
-    stop_time = arrow.get(stop_time_string)
+    start_time = arrow.get(start_time_string, tzinfo="Asia/Shanghai")
+    stop_time = arrow.get(stop_time_string, tzinfo="Asia/Shanghai")
     return start_time <= arrow.now() <= stop_time
 
 
