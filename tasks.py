@@ -92,9 +92,9 @@ def get_score(from_student, to_student):
         sub_score = calculate_score(from_student_answer, to_student_answer)
         score += sub_score
 
-        score = math.sqrt(score)
-        if score >= 2147483647:
-            score = 2147483647
+    score = math.sqrt(score)
+    if score >= 2147483647:
+        score = 2147483647
 
     return score
 
