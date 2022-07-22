@@ -248,7 +248,6 @@ def questionnaire_set_answers():
 
 @student_pages.get('/team/recommend_teammates')
 @student_required()
-@in_step_3_period()
 def team_recommend_teammates():
     recommend_scores = db_session.query(MatchingScore) \
         .where(MatchingScore.to_student_id == current_user.id) \
