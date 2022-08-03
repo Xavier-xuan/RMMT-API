@@ -13,10 +13,10 @@ from models import *
 
 def scan_students():
     if not is_in_calculating_time():
-        print("当前时间不在算法匹配时间段内")
+        output("当前时间不在算法匹配时间段内")
         return
     else:
-        print("开始进行算法匹配")
+        output("开始进行算法匹配")
 
     students = db_session.query(Student) \
         .options(
@@ -30,7 +30,7 @@ def scan_students():
         student_ids[student.gender].append(student.id)
 
     for student in students:
-        print("正在检测学生 {}({}) 的匹配列表是否完整".format(student.name, student.id))
+        output("正在检测学生 {}({}) 的匹配列表是否完整".format(student.name, student.id))
         # 已经计算了匹配分数的id
         existed_ids = [id[0]
                        for id
@@ -49,18 +49,18 @@ def scan_students():
 
                 from_student = student
                 to_student = get_student_by_id(target_student_id, students)
-                print("正在计算学生 {}({}) 对 {}({}) 的匹配分数".format(from_student.name, from_student.id, to_student.name,
+                output("正在计算学生 {}({}) 对 {}({}) 的匹配分数".format(from_student.name, from_student.id, to_student.name,
                                                             to_student.id))
                 score = get_score(from_student=from_student, to_student=to_student)
                 matching_scores.append(
                     MatchingScore(from_student_id=from_student.id, to_student_id=to_student.id, score=math.ceil(score))
                 )
-                print("计算完成")
+                output("计算完成")
 
         db_session.bulk_save_objects(matching_scores)
         db_session.commit()
 
-    print("算法匹配完成")
+    output("算法匹配完成")
 
 
 def get_student_by_id(student_id, students):
@@ -178,7 +178,11 @@ def is_in_calculating_time():
     stop_time_string = db_session.query(SystemSetting.value).filter(SystemSetting.key == "step_2_end_at").first()[0]
     start_time = arrow.get(start_time_string, tzinfo="Asia/Shanghai")
     stop_time = arrow.get(stop_time_string, tzinfo="Asia/Shanghai")
-    return start_time <= arrow.now() <= stop_time
+    return start_time <= arrow.now("Asia/Shanghai") <= stop_time
+
+def output(message):
+    time_prefix = "[{}] ".format(arrow.now("Asia/Shanghai").format("YYYY-MM-DD HH:mm:ss"))
+    print(time_prefix + message)
 
 
 if __name__ == '__main__':
