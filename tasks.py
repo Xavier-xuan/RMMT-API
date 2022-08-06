@@ -50,7 +50,7 @@ def scan_students():
                 from_student = student
                 to_student = get_student_by_id(target_student_id, students)
                 output("正在计算学生 {}({}) 对 {}({}) 的匹配分数".format(from_student.name, from_student.id, to_student.name,
-                                                            to_student.id))
+                                                             to_student.id))
                 score = get_score(from_student=from_student, to_student=to_student)
                 matching_scores.append(
                     MatchingScore(from_student_id=from_student.id, to_student_id=to_student.id, score=math.ceil(score))
@@ -64,11 +64,16 @@ def scan_students():
 
 
 def get_student_by_id(student_id, students):
-    for student in students:
-        if student_id == student.id:
-            return student
+    # for student in students:
+    #     if student_id == student.id:
+    #         return student
+    student = db_session.query(Student) \
+        .options(
+        joinedload(Student.sent_matching_scores), joinedload(Student.questionnaire_answers)) \
+        .group_by(Student) \
+        .filter(Student.id == student_id).first()
 
-    return None
+    return student
 
 
 def get_score(from_student, to_student):
@@ -179,6 +184,7 @@ def is_in_calculating_time():
     start_time = arrow.get(start_time_string, tzinfo="Asia/Shanghai")
     stop_time = arrow.get(stop_time_string, tzinfo="Asia/Shanghai")
     return start_time <= arrow.now("Asia/Shanghai") <= stop_time
+
 
 def output(message):
     time_prefix = "[{}] ".format(arrow.now("Asia/Shanghai").format("YYYY-MM-DD HH:mm:ss"))
