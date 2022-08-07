@@ -19,9 +19,7 @@ def scan_students():
         output("开始进行算法匹配")
 
     students = db_session.query(Student) \
-        .options(
-        joinedload(Student.sent_matching_scores), joinedload(Student.questionnaire_answers)) \
-        .group_by(Student).all()
+        .all()
 
     students = [student for student in students if student.has_answered_questionnaire()]
     student_ids = [[], [], []]  # 0 None,  1 male , 2 female
