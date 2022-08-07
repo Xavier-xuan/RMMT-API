@@ -25,9 +25,11 @@ def scan_students():
 
     students = [student for student in students if student.has_answered_questionnaire()]
     student_ids = [[], [], []]  # 0 None,  1 male , 2 female
+    id_to_students = {}
 
     for student in students:
         student_ids[student.gender].append(student.id)
+        id_to_students[student.id] = student
 
     for student in students:
         output("正在检测学生 {}({}) 的匹配列表是否完整".format(student.name, student.id))
@@ -48,7 +50,7 @@ def scan_students():
                     continue
 
                 from_student = student
-                to_student = get_student_by_id(target_student_id, students)
+                to_student = id_to_students[target_student_id]
                 output("正在计算学生 {}({}) 对 {}({}) 的匹配分数".format(from_student.name, from_student.id, to_student.name,
                                                              to_student.id))
                 score = get_score(from_student=from_student, to_student=to_student)
