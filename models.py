@@ -80,6 +80,10 @@ class Student(Base, SerializerMixin):
     created_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
     last_logged_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
     name = Column(String(64), nullable=False)
+    QQ = Column(Text)
+    Wechat = Column(Text)
+    Phone = Column(Text)
+    mbti = Column(String(4))
 
     custom_questionnaire_items = relationship('CustomQuestionnaireItem', backref="student")
     custom_questionnaire_answers = relationship('CustomQuestionnaireAnswer', backref="student")
