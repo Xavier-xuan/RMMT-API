@@ -2,7 +2,7 @@ from datetime import timedelta
 
 
 class GeneralConfig:
-    DATABASE_URL = "mysql+pymysql://root:D95CNty*`X4.LS_@gz-cynosdbmysql-grp-o4wm9our.sql.tencentcdb.com:24249/RMMT"
+    DATABASE_URL = "mysql+pymysql://root:@localhost:4403/RMMT"
     JWT_SECRET_KEY = "R2xpmzp1F9QcpHn9"
     DATABASE_LOG = True
     ASYNC_JOB_SCAN_INTERVAL = 10  # in seconds
