@@ -16,7 +16,7 @@ app.config.from_object(GeneralConfig)
 jwt = JWTManager(app)
 
 # security headers
-Talisman(app)
+# Talisman(app)
 
 app.register_blueprint(admin_pages, url_prefix="/api/admin")
 app.register_blueprint(student_pages, url_prefix="/api/student")
