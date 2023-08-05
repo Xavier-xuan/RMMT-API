@@ -747,7 +747,8 @@ def get_system_settings():
             "step_3_start_at": get_system_setting("step_3_start_at"),
             "step_3_end_at": get_system_setting("step_3_end_at"),
             "team_max_student_count": get_system_setting("team_max_student_count"),
-            "questionnaire_json": get_system_setting("questionnaire_json", {})
+            "questionnaire_json": get_system_setting("questionnaire_json", {}),
+            "tips": get_system_setting("tips", {})
         }
     })
 
