@@ -306,9 +306,9 @@ class MatchingScore(Base, SerializerMixin):
     score = Column(INTEGER(11), nullable=False)
     created_at = Column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
 
-    from_student = relationship('Student', primaryjoin='MatchingScore.from_student_id == Student.id',
+    from_student = relationship('Student', primaryjoin='MatchingScore.from_student_id == Student.id', cascade = "all,delete",
                                 backref="sent_matching_scores")
-    to_student = relationship('Student', primaryjoin='MatchingScore.to_student_id == Student.id',
+    to_student = relationship('Student', primaryjoin='MatchingScore.to_student_id == Student.id', cascade = "all,delete",
                               backref="received_matching_scores")
 
 

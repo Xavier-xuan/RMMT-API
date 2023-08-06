@@ -6,6 +6,8 @@ import bcrypt
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, verify_jwt_in_request, get_jwt, current_user
 from sqlalchemy.orm import joinedload
+from sqlalchemy import or_
+
 
 from database import db_session
 from models import Admin, Student, Team, ExchangingNeed, CustomQuestionnaireItem, SystemSetting, QuestionnaireItem, \
@@ -333,6 +335,7 @@ def student_delete():
         id = request.json.get('student_id', None)
         student = db_session.query(Student).get(id)
         if student is not None:
+            db_session.query(MatchingScore).where(or_(MatchingScore.from_student_id == student.id, MatchingScore.to_student_id == student.id)).delete()
             db_session.query(TeamInvitation).where(TeamInvitation.from_student_id == student.id).delete()
             db_session.query(TeamInvitation).where(TeamInvitation.to_student_id == student.id).update({
                 TeamInvitation.to_student_id: 0,
