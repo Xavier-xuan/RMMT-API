@@ -126,7 +126,7 @@ def userinfo():
         "msg": "success",
         "data": {
             "user": current_user.to_dict(
-                only=['id', 'name', 'gender', 'contact', 'team_id', 'team.id', 'team.students.id', 'team.students.name',
+                only=['id', 'name', 'gender', 'contact', 'QQ','Wechat','Phone','mbti','team_id', 'team.id', 'team.students.id', 'team.students.name',
                       'has_answered_questionnaire'])
         }
     })
@@ -772,12 +772,16 @@ def get_student_detail(id):
     else:
         student.score = None
 
+    print(student.to_dict(only=['id', 'name', 'team', 'team_id', 'score', 'questionnaire_answers', 'contact', 'team.id',
+                  'team.students.id','QQ','Wechat','Phone',
+                  'team.students.name', 'team.students.contact', 'has_answered_questionnaire']))
+
     return jsonify({
         "code": 200,
         "msg": "success",
         "data": student.to_dict(
             only=['id', 'name', 'team', 'team_id', 'score', 'questionnaire_answers', 'contact', 'team.id',
-                  'team.students.id',
+                  'team.students.id','QQ','Wechat','Phone',
                   'team.students.name', 'team.students.contact', 'has_answered_questionnaire'])
     })
 

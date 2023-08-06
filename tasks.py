@@ -105,7 +105,7 @@ def get_score(from_student, to_student):
 
 
 def calculate_score(from_student_answer, to_student_answer):
-    data_type = from_student_answer.item.data_type;
+    data_type = from_student_answer.item.data_type
     if data_type == "number":
         try:
             from_answer = int(from_student_answer.answer.replace('"', ""))
@@ -131,7 +131,7 @@ def calculate_score(from_student_answer, to_student_answer):
 
         if data_type == "number_array":
             start_difference = start_answer_array[0] - to_answer_array[0]
-            end_difference = start_answer_array[0] - to_answer_array[1]
+            end_difference = start_answer_array[1] - to_answer_array[1]
             return range_difference(start_difference, end_difference, to_student_answer.weight)
         elif data_type == "time_array":
             start_difference = time_difference_in_seconds(start_answer_array[0], to_answer_array[0])
