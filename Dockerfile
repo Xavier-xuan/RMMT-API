@@ -1,5 +1,5 @@
 # 使用 Python 官方的 Docker 镜像作为基础镜像
-FROM python:3.20-alpine
+FROM python:3.12-alpine
 
 # 设置环境变量
 ARG NAME
@@ -14,8 +14,8 @@ WORKDIR /app
 COPY . /app
 
 # 安装应用依赖
-RUN echo 'http://mirrors.tencent.com/alpine/v3.13/main/' > /etc/apk/repositories \
-    && echo 'http://mirrors.tencent.com/alpine/v3.13/community/' >> /etc/apk/repositories
+RUN echo 'https://mirrors.tencent.com/alpine/v3.20/main/' > /etc/apk/repositories \
+    && echo 'https://mirrors.tencent.com/alpine/v3.20/community/' >> /etc/apk/repositories
 RUN apk add --update musl-dev gcc cargo
 RUN pip install -i ${PIP_SOURCE} --no-cache-dir -r requirements.txt
 RUN pip install -i ${PIP_SOURCE} gunicorn
