@@ -547,7 +547,7 @@ def system_reset():
 @admin_pages.get('/team/list')
 @admin_required()
 def team_list():
-    teams = db_session.query(Team).options(joinedload('students')).all()
+    teams = db_session.query(Team).options(joinedload(Team.students)).all()
 
     teams = [team.to_dict(only=['id', 'gender', 'description', 'created_at', 'students.id', 'students.name']) for team
              in teams]
