@@ -5,7 +5,7 @@ FROM python:3.12-alpine
 ARG NAME
 
 ENV NAME=${NAME}
-ENV PIP_SOURCE "https://pypi.tuna.tsinghua.edu.cn/simple"
+ENV PIP_SOURCE="https://pypi.tuna.tsinghua.edu.cn/simple"
 
 # 设置工作目录
 WORKDIR /app
