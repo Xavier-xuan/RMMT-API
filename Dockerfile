@@ -1,5 +1,5 @@
 # 使用 Python 官方的 Docker 镜像作为基础镜像
-FROM python:3.13-alpine
+FROM python:3.12-alpine
 
 # 设置环境变量
 ARG NAME
