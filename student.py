@@ -671,7 +671,7 @@ def team_request_process():
         accept = bool(request.json.get("accept"))
 
         team_request = db_session.query(TeamRequest) \
-            .join(TeamRequest.student, TeamRequest.team) \
+            .join(TeamRequest.student).join(TeamRequest.team) \
             .filter(TeamRequest.id == team_request_id) \
             .first()
 
@@ -758,8 +758,7 @@ def get_system_settings():
 def get_student_detail(id):
     # TODO:: 优化Questionnaire_item的 SQL
     student = db_session.query(Student).filter(Student.id == id) \
-        .join(Team, QuestionnaireAnswer,
-              isouter=True) \
+        .outerjoin(Team).outerjoin(QuestionnaireAnswer) \
         .first()
 
     matching_score = db_session.query(MatchingScore) \

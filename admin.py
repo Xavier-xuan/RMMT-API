@@ -228,8 +228,7 @@ def student_info():
     if request.args is not None:
         id = request.args.get('student_id', None)
         student = db_session.query(Student).filter(Student.id == id) \
-            .join(Team, CustomQuestionnaireItem, ExchangingNeed,
-                  isouter=True).first()
+            .outerjoin(Team).outerjoin(CustomQuestionnaireItem).outerjoin(ExchangingNeed).first()
         if student is not None:
             return jsonify({
                 "code": 200,
