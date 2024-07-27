@@ -12,7 +12,6 @@ from sqlalchemy_serializer import SerializerMixin
 from database import db_session
 
 Base = declarative_base()
-metadata = Base.metadata
 
 
 class Admin(Base, SerializerMixin):
@@ -376,3 +375,8 @@ def set_system_setting(key, value):
     else:
         item.value = value
         db_session.commit()
+
+
+if __name__ == "__main__":
+    from database import engine
+    Base.metadata.create_all(engine)
