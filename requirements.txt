@@ -4,6 +4,6 @@ Flask==3.0.3
 Flask_Cors==4.0.1
 Flask_JWT_Extended==4.6.0
 flask_talisman==1.1.0
-python_bcrypt==0.3.2
-SQLAlchemy==2.0.29
+bcrypt==4.2.0
+SQLAlchemy==2.0.31
 sqlalchemy_serializer==1.4.22

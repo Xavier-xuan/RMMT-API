@@ -1,5 +1,5 @@
 # 使用 Python 官方的 Docker 镜像作为基础镜像
-FROM python:3.10-alpine
+FROM python:3.13-alpine
 
 # 设置环境变量
 ARG NAME
@@ -14,6 +14,7 @@ WORKDIR /app
 COPY . /app
 
 # 安装应用依赖
+RUN apk add --update musl-dev gcc cargo
 RUN pip install -i ${PIP_SOURCE} --no-cache-dir -r requirements.txt
 RUN pip install -i ${PIP_SOURCE} gunicorn
 RUN pip install -i ${PIP_SOURCE} gevent
