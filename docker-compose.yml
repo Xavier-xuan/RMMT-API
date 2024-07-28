@@ -43,7 +43,7 @@ services:
     # 环境变量 可以在Dockerfile中配置环境变量，应用中获取
     environment:
       - NAME="rmmt-api-task"
-    command: ["sh", "-c", "python tasks.py >> log/tasks.log"]
+    command: "python tasks.py >> log/tasks.log"
 
 networks:
   1panel-network:
