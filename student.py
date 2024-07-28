@@ -126,7 +126,8 @@ def userinfo():
         "msg": "success",
         "data": {
             "user": current_user.to_dict(
-                only=['id', 'name', 'gender', 'contact', 'QQ','Wechat','Phone','mbti','team_id', 'team.id', 'team.students.id', 'team.students.name',
+                only=['id', 'name', 'gender', 'contact', 'QQ', 'Wechat', 'Phone', 'mbti', 'team_id', 'team.id',
+                      'team.students.id', 'team.students.name',
                       'has_answered_questionnaire'])
         }
     })
@@ -233,9 +234,9 @@ def questionnaire_set_answers():
             db_session.commit()
 
             # 删除匹配得分
-            db_session.query(MatchingScore)\
+            db_session.query(MatchingScore) \
                 .filter((MatchingScore.to_student_id == current_user.id) | (
-                        MatchingScore.from_student_id == current_user.id))\
+                    MatchingScore.from_student_id == current_user.id)) \
                 .delete(synchronize_session=False)
 
             db_session.commit()
@@ -252,7 +253,7 @@ def team_recommend_teammates():
     recommend_scores = db_session.query(MatchingScore) \
         .where(MatchingScore.to_student_id == current_user.id) \
         .options(joinedload(MatchingScore.from_student)) \
-        .order_by(MatchingScore.score.desc() ) \
+        .order_by(MatchingScore.score.desc()) \
         .all()
 
     construct_data = []
@@ -260,7 +261,7 @@ def team_recommend_teammates():
     for piece in recommend_scores:
         if piece.from_student.gender != current_user.gender:
             continue
-        item = piece.from_student.to_dict(only=['id', 'name', 'contact','QQ','Wechat','Phone','mbti'])
+        item = piece.from_student.to_dict(only=['id', 'name', 'contact', 'QQ', 'Wechat', 'Phone', 'mbti'])
         # join load 不能执行关联查询 所以在这里手动过滤
 
         item['score'] = piece.score
@@ -272,7 +273,8 @@ def team_recommend_teammates():
         .where(Student.id.not_in(added_student_ids)) \
         .all()
 
-    students_with_no_score = [piece.to_dict(only=['id', 'name', 'contact','QQ','Wechat','Phone','mbti']) for piece in students_with_no_score]
+    students_with_no_score = [piece.to_dict(only=['id', 'name', 'contact', 'QQ', 'Wechat', 'Phone', 'mbti']) for piece
+                              in students_with_no_score]
 
     return jsonify({
         "code": 200,
@@ -771,17 +773,14 @@ def get_student_detail(id):
     else:
         student.score = None
 
-    print(student.to_dict(only=['id', 'name', 'team', 'team_id', 'score', 'questionnaire_answers', 'contact', 'team.id',
-                  'team.students.id','QQ','Wechat','Phone',
-                  'team.students.name', 'team.students.contact', 'has_answered_questionnaire']))
-
     return jsonify({
         "code": 200,
         "msg": "success",
         "data": student.to_dict(
             only=['id', 'name', 'team', 'team_id', 'score', 'questionnaire_answers', 'contact', 'team.id',
-                  'team.students.id','QQ','Wechat','Phone',
-                  'team.students.name', 'team.students.contact', 'has_answered_questionnaire'])
+                  'team.students.id', 'QQ', 'Wechat', 'Phone',
+                  'team.students.name', 'team.students.contact', 'team.students.QQ', 'team.students.Wechat',
+                  'has_answered_questionnaire'])
     })
 
 
@@ -797,7 +796,7 @@ def get_team_detail():
         "code": 200,
         "msg": "success",
         "data": current_user.team.to_dict(['id', 'description', 'students.id',
-                                           'students.name', 'students.contact', 'students.has_answered_questionnaire',
+                                           'students.name', 'students.contact', 'students.QQ', 'students.Wechat' ,'students.has_answered_questionnaire',
                                            'students.questionnaire_answers'])
     })
 
@@ -851,7 +850,7 @@ def change_password():
 @student_required()
 def update_contact():
     if request.json is not None:
-        
+
         new_QQ = request.json.get('QQ')
         new_Wechat = request.json.get('Wechat')
         if (new_Wechat is None or len(new_Wechat) < 1) and (new_QQ is None or len(new_QQ) < 1):
@@ -867,12 +866,12 @@ def update_contact():
         #     })
         new_MBTI = request.json.get('mbti')
         new_contact = request.json.get("contact")
-       
+
         current_user.contact = new_contact
-        current_user.QQ= new_QQ
-        current_user.Wechat= new_Wechat
-        current_user.Phone= new_Phone
-        current_user.mbti= new_MBTI
+        current_user.QQ = new_QQ
+        current_user.Wechat = new_Wechat
+        current_user.Phone = new_Phone
+        current_user.mbti = new_MBTI
 
         db_session.commit()
         return jsonify({
