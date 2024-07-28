@@ -302,7 +302,7 @@ class MatchingScore(Base, SerializerMixin):
                              index=True)
     to_student_id = Column(ForeignKey('students.id', ondelete='CASCADE', onupdate='CASCADE'), nullable=False,
                            index=True)
-    score = Column(INTEGER(11), nullable=False)
+    score = Column(DOUBLE(), nullable=False)
     created_at = Column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
 
     from_student = relationship('Student', primaryjoin='MatchingScore.from_student_id == Student.id', cascade = "all,delete",

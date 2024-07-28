@@ -252,7 +252,7 @@ def team_recommend_teammates():
     recommend_scores = db_session.query(MatchingScore) \
         .where(MatchingScore.to_student_id == current_user.id) \
         .options(joinedload(MatchingScore.from_student)) \
-        .order_by(MatchingScore.score) \
+        .order_by(MatchingScore.score.desc() ) \
         .all()
 
     construct_data = []
@@ -853,23 +853,18 @@ def update_contact():
     if request.json is not None:
         
         new_QQ = request.json.get('QQ')
-        if new_QQ is None:
-            return jsonify({
-                "code": 400,
-                "msg": "QQ不能为空"
-            })
         new_Wechat = request.json.get('Wechat')
-        if new_Wechat is None:
+        if (new_Wechat is None or len(new_Wechat) < 1) and (new_QQ is None or len(new_QQ) < 1):
             return jsonify({
                 "code": 400,
-                "msg": "Wechat不能为空"
+                "msg": "QQ和Wechat不能同时为空"
             })
         new_Phone = request.json.get('Phone')
-        if new_Phone is None:
-            return jsonify({
-                "code": 400,
-                "msg": "电话不能为空"
-            })
+        # if new_Phone is None:
+        #     return jsonify({
+        #         "code": 400,
+        #         "msg": "电话不能为空"
+        #     })
         new_MBTI = request.json.get('mbti')
         new_contact = request.json.get("contact")
        
