@@ -23,5 +23,8 @@ RUN pip install -i ${PIP_SOURCE} gevent
 
 EXPOSE 5000
 
+# 设置入口点
+ENTRYPOINT ["sh", "-c"]
+
 # 设置启动命令
-CMD ["gunicorn", "-c", "gunicorn.config.py" ,"app:app"]
+CMD ["echo 'Starting app...'&& python models.py && gunicorn -c gunicorn.config.py app:app"]

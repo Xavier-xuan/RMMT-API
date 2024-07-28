@@ -23,6 +23,28 @@ services:
     # 端口映射 容器端口映射到主机端口
     ports:
       - "5000:5000"
+      -
+  rmmt-api-task:
+    # 容器名称
+    container_name: rmmt-api-task
+    build:
+      #在当前目录下寻找Dockerfile文件并构建镜像
+      context: .
+      dockerfile: Dockerfile
+      # 重启策略
+    restart: always
+    # 使用1Panel的网络方便容器间通信
+    networks:
+      - 1panel-network
+    # 挂载目录 本地化容器数据
+    # 这里挂载了本地当前目录的app目录到容器的/app目录
+    volumes:
+      - ./:/app
+    # 环境变量 可以在Dockerfile中配置环境变量，应用中获取
+    environment:
+      - NAME="rmmt-api-task"
+      -
+    command: ["python", "tasks.py", ">>", "log/tasks.log"]
 
 networks:
   1panel-network:
