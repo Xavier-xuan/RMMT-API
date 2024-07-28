@@ -23,7 +23,7 @@ services:
     # 端口映射 容器端口映射到主机端口
     ports:
       - "5000:5000"
-      -
+
   rmmt-api-task:
     # 容器名称
     container_name: rmmt-api-task
