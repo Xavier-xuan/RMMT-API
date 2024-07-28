@@ -778,9 +778,9 @@ def get_student_detail(id):
         "msg": "success",
         "data": student.to_dict(
             only=['id', 'name', 'team', 'team_id', 'score', 'questionnaire_answers', 'contact', 'team.id',
-                  'team.students.id', 'QQ', 'Wechat', 'Phone',
+                  'team.students.id', 'QQ', 'Wechat', 'Phone', 'mbti',
                   'team.students.name', 'team.students.contact', 'team.students.QQ', 'team.students.Wechat',
-                  'has_answered_questionnaire'])
+                  'team.students.mbti', 'has_answered_questionnaire'])
     })
 
 
