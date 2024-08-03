@@ -16,7 +16,6 @@ from models import Admin, Student, Team, ExchangingNeed, CustomQuestionnaireItem
 
 admin_pages = Blueprint('admin_pages', __name__, template_folder="templates/admin")
 
-
 def admin_required():
     def wrapper(fn):
         @wraps(fn)

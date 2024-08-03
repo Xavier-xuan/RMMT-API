@@ -321,7 +321,7 @@ class QuestionnaireAnswer(Base, SerializerMixin):
     updated_at = Column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
     student_id = Column(ForeignKey('students.id', ondelete='CASCADE', onupdate='CASCADE'), index=True)
     weight = Column(DOUBLE(), nullable=False, server_default=text("'1'"))
-
+    
     item = relationship('QuestionnaireItem', order_by="asc(QuestionnaireItem.index)",
                         primaryjoin='QuestionnaireItem.id == QuestionnaireAnswer.item_id', lazy='joined')
 
