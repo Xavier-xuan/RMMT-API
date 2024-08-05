@@ -1,6 +1,6 @@
 import decimal
 import json
-import numpy as np
+import math
 
 import arrow
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -18,10 +18,11 @@ def scan_students():
     else:
         output("开始进行算法匹配")
 
-    students = db_session.query(Student).all()
+    students = db_session.query(Student) \
+        .all()
 
     students = [student for student in students if student.has_answered_questionnaire()]
-    student_ids = [[], [], []]  # 0 None,  1 male, 2 female
+    student_ids = [[], [], []]  # 0 None,  1 male , 2 female
     id_to_students = {}
 
     for student in students:
@@ -34,8 +35,8 @@ def scan_students():
         existed_ids = [id[0]
                        for id
                        in db_session.query(MatchingScore.to_student_id)
-                       .filter(MatchingScore.from_student_id == student.id)
-                       .all()
+                           .filter(MatchingScore.from_student_id == student.id)
+                           .all()
                        ]
 
         matching_scores = []
@@ -48,12 +49,11 @@ def scan_students():
 
                 from_student = student
                 to_student = id_to_students[target_student_id]
-                output("正在计算学生 {}({}) 对 {}({}) 的匹配分数".format(from_student.name, from_student.id,
-                                                                         to_student.name,
-                                                                         to_student.id))
+                output("正在计算学生 {}({}) 对 {}({}) 的匹配分数".format(from_student.name, from_student.id, to_student.name,
+                                                             to_student.id))
                 score = get_score(from_student=from_student, to_student=to_student)
                 matching_scores.append(
-                    MatchingScore(from_student_id=from_student.id, to_student_id=to_student.id, score=score)
+                    MatchingScore(from_student_id=from_student.id, to_student_id=to_student.id, score=math.ceil(score))
                 )
                 output("计算完成")
 
@@ -64,6 +64,9 @@ def scan_students():
 
 
 def get_student_by_id(student_id, students):
+    # for student in students:
+    #     if student_id == student.id:
+    #         return student
     student = db_session.query(Student) \
         .options(
         joinedload(Student.sent_matching_scores), joinedload(Student.questionnaire_answers)) \
@@ -76,10 +79,7 @@ def get_student_by_id(student_id, students):
 def get_score(from_student, to_student):
     to_student_questionnaire_answers = to_student.questionnaire_answers
     from_student_questionnaire_answers = from_student.questionnaire_answers
-
-    from_vector = []
-    to_vector = []
-    weights = []
+    score = 0
 
     for to_student_answer in to_student_questionnaire_answers:
         if to_student_answer.weight <= 0:
@@ -94,79 +94,80 @@ def get_score(from_student, to_student):
         if from_student_answer.item.data_type == "text":
             continue
 
-        from_value, to_value = get_answer_values(from_student_answer, to_student_answer)
-        if from_value is not None and to_value is not None:
-            from_vector.append(from_value)
-            to_vector.append(to_value)
-            weights.append(float(to_student_answer.weight))
+        sub_score = calculate_score(from_student_answer, to_student_answer)
+        score += sub_score
 
-    if not from_vector or not to_vector:
-        return 0
+    score = math.sqrt(score)
+    if score >= 2147483647:
+        score = 2147483647
 
-    # 计算加权后的余弦相似度
-    from_vector = np.array(from_vector)
-    to_vector = np.array(to_vector)
-    weights = np.array(weights)
-
-    cosine_similarity = calculate_cosine_similarity(from_vector, to_vector, weights)
-
-    # 将余弦相似度转换为分数（0-100）
-    score = cosine_similarity * 100
     return score
 
 
-def calculate_cosine_similarity(vector1, vector2, weights):
-    weighted_dot_product = np.dot(weights * vector1, vector2)
-    weighted_magnitude1 = np.sqrt(np.dot(weights, vector1 ** 2))
-    weighted_magnitude2 = np.sqrt(np.dot(weights, vector2 ** 2))
-    if weighted_magnitude1 == 0 or weighted_magnitude2 == 0:
-        return 0
-    return weighted_dot_product / (weighted_magnitude1 * weighted_magnitude2)
-
-
-def get_answer_values(from_student_answer, to_student_answer):
+def calculate_score(from_student_answer, to_student_answer):
     data_type = from_student_answer.item.data_type
     if data_type == "number":
         try:
             from_answer = int(from_student_answer.answer.replace('"', ""))
             to_answer = int(to_student_answer.answer.replace('"', ""))
-            return from_answer, to_answer
+            difference = decimal.Decimal((from_answer - to_answer)) * to_student_answer.weight
+            return math.pow(difference, 2)
         except ValueError:
-            return None, None
+            return 0
     elif data_type == "time":
-        from_answer = time_difference_in_seconds(from_student_answer.answer)
-        to_answer = time_difference_in_seconds(to_student_answer.answer)
-        return from_answer, to_answer
+        from_answer = from_student_answer.answer
+        to_answer = to_student_answer.answer
+        difference = decimal.Decimal(time_difference_in_seconds(from_answer, to_answer)) \
+                     * to_student_answer.weight
+        return math.pow(difference, 2)
     elif data_type == "date":
-        from_answer = date_difference_in_days(from_student_answer.answer)
-        to_answer = date_difference_in_days(to_student_answer.answer)
-        return from_answer, to_answer
+        difference = decimal.Decimal(date_difference_in_days(from_student_answer.answer, to_student_answer.answer)) \
+                     * to_student_answer.weight
+        return math.pow(difference, 2)
+
     elif data_type.endswith("_array"):
-        from_answer_array = json.loads(from_student_answer.answer)
+        start_answer_array = json.loads(from_student_answer.answer)
         to_answer_array = json.loads(to_student_answer.answer)
+
         if data_type == "number_array":
-            return np.mean(from_answer_array), np.mean(to_answer_array)
+            start_difference = start_answer_array[0] - to_answer_array[0]
+            end_difference = start_answer_array[1] - to_answer_array[1]
+            return range_difference(start_difference, end_difference, to_student_answer.weight)
         elif data_type == "time_array":
-            from_answer = [time_difference_in_seconds(t)/60 for t in from_answer_array]
-            to_answer = [time_difference_in_seconds(t)/60 for t in to_answer_array]
-            return np.mean(from_answer), np.mean(to_answer)
+            start_difference = time_difference_in_seconds(start_answer_array[0], to_answer_array[0])
+            end_difference = time_difference_in_seconds(start_answer_array[1], to_answer_array[1])
+            return range_difference(start_difference, end_difference, to_student_answer.weight)
         elif data_type == "date_array":
-            from_answer = [date_difference_in_days(d) for d in from_answer_array]
-            to_answer = [date_difference_in_days(d) for d in to_answer_array]
-            return np.mean(from_answer), np.mean(to_answer)
+            start_difference = date_difference_in_days(start_answer_array[0], to_answer_array[0])
+            end_difference = date_difference_in_days(start_answer_array[1], to_answer_array[1])
+            return range_difference(start_difference, end_difference, to_student_answer.weight)
         elif data_type == "text_array":
-            return len(set(from_answer_array)), len(set(to_answer_array))
-    return None, None
+            return len(set(start_answer_array).difference(set(to_answer_array)))
+
+    return 0
 
 
-def date_difference_in_days(date_string):
-    date = arrow.get(date_string)
-    return (date - arrow.get('1970-01-01')).total_seconds() / 86400
+def range_difference(start_difference, end_difference, weight):
+    if start_difference < 0:
+        start_difference = 0
+
+    if end_difference < 0:
+        end_difference = 0
+
+    return math.pow(decimal.Decimal(start_difference) * weight, 2) + math.pow(decimal.Decimal(end_difference) * weight,
+                                                                              2)
 
 
-def time_difference_in_seconds(time_string):
-    time = arrow.get(time_string, "HH:mm:ss")
-    return time.hour * 3600 + time.minute * 60 + time.second
+def date_difference_in_days(date1_string, date2_string):
+    date1 = arrow.get(date1_string)
+    date2 = arrow.get(date2_string)
+    return (date1 - date2).total_seconds() / 86400
+
+
+def time_difference_in_seconds(time1_string, time2_string):
+    time1 = arrow.get(time1_string, "HH:mm:ss")
+    time2 = arrow.get(time2_string, "HH:mm:ss")
+    return (time1 - time2).total_seconds()
 
 
 def get_questionnaire_answer_by_item_id(item_id, questionnaire_answers):

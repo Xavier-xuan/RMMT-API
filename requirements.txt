@@ -8,3 +8,4 @@ bcrypt==4.2.0
 SQLAlchemy==2.0.29
 sqlalchemy_serializer==1.4.22
 pymysql==1.1.1
+numpy==2.0.1
