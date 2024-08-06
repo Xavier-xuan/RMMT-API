@@ -20,6 +20,7 @@ RUN apk add --update musl-dev gcc cargo
 RUN pip install -i ${PIP_SOURCE} --no-cache-dir -r requirements.txt
 RUN pip install -i ${PIP_SOURCE} gunicorn
 RUN pip install -i ${PIP_SOURCE} gevent
+RUN export HF_ENDPOINT=https://hf-mirror.com
 
 EXPOSE 5000
 

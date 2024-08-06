@@ -10,6 +10,10 @@ from sqlalchemy.orm import joinedload
 import config
 from models import *
 
+from text2vec import cos_sim, SentenceModel
+
+
+model = SentenceModel()
 
 def scan_students():
     if not is_in_calculating_time():
@@ -52,6 +56,7 @@ def scan_students():
                                                                          to_student.name,
                                                                          to_student.id))
                 score = get_score(from_student=from_student, to_student=to_student)
+                score = decimal.Decimal(score).quantize(decimal.Decimal('0.00'))
                 matching_scores.append(
                     MatchingScore(from_student_id=from_student.id, to_student_id=to_student.id, score=score)
                 )
@@ -77,44 +82,59 @@ def get_score(from_student, to_student):
     to_student_questionnaire_answers = to_student.questionnaire_answers
     from_student_questionnaire_answers = from_student.questionnaire_answers
 
-    from_vector = []
-    to_vector = []
-    weights = []
+    question_match = {}
 
-    for to_student_answer in to_student_questionnaire_answers:
-        if to_student_answer.weight <= 0:
-            continue
+    # 计算两个学生的问卷答案的余弦相似度
+    # 查询效率是否有优化空间？ O(n^2) -> O(nlogn)
+    to_student_questionnaire_answers.sort(key=lambda x: x.item_id)
+    from_student_questionnaire_answers.sort(key=lambda x: x.item_id)
+    
+    i = 0 # to_student_questionnaire_answers index
+    j = 0 # from_student_questionnaire_answers index
+    changes = False
+    while i < len(to_student_questionnaire_answers) and j < len(from_student_questionnaire_answers):
+        to_student_answer = to_student_questionnaire_answers[i]
+        from_student_answer = from_student_questionnaire_answers[j]
+        if to_student_answer.item_id == from_student_answer.item_id:
+            i += 1
+            j += 1
 
-        from_student_answer = get_questionnaire_answer_by_item_id(to_student_answer.item_id,
-                                                                  from_student_questionnaire_answers)
+            if to_student_answer.weight <= 0:
+                continue
 
-        if from_student_answer is None:
-            continue
+            if to_student_answer.vector is None or len(to_student_answer.vector) < 1:
+                to_student_answer.vector = json.dumps(model.encode(to_student_answer.answer).tolist())
+                changes = True
 
-        if from_student_answer.item.data_type == "text":
-            continue
+            if from_student_answer.vector is None or len(from_student_answer.vector) < 1:
+                from_student_answer.vector = json.dumps(model.encode(from_student_answer.answer).tolist())
+                changes = True
 
-        from_value, to_value = get_answer_values(from_student_answer, to_student_answer)
-        if from_value is not None and to_value is not None:
-            from_vector.append(from_value)
-            to_vector.append(to_value)
-            weights.append(float(to_student_answer.weight))
+            to_student_answer_vector = np.array(json.loads(to_student_answer.vector))
+            from_student_answer_vector = np.array(json.loads(from_student_answer.vector))
 
-    if not from_vector or not to_vector:
-        return 0
+            value = cos_sim(to_student_answer_vector, from_student_answer_vector)
+            value = value.item()
+            question_match[to_student_answer.item_id] = (value, to_student_answer.weight)
 
+        elif to_student_answer.item_id < from_student_answer.item_id:
+            i += 1
+        else:
+            j += 1
+    
     # 计算加权后的余弦相似度
-    from_vector = np.array(from_vector)
-    to_vector = np.array(to_vector)
-    weights = np.array(weights)
-
-    cosine_similarity = calculate_cosine_similarity(from_vector, to_vector, weights)
+    cosine_similarity = np.sum([float(value) * float(weight) for value, weight in question_match.values()])
+    cosine_similarity /= np.sum([float(weight) for value, weight in question_match.values()])
 
     # 将余弦相似度转换为分数（0-100）
     score = cosine_similarity * 100
+    output("score: {}".format(score))
+
+    if changes:
+        db_session.commit()
     return score
 
-
+# Not used
 def calculate_cosine_similarity(vector1, vector2, weights):
     weighted_dot_product = np.dot(weights * vector1, vector2)
     weighted_magnitude1 = np.sqrt(np.dot(weights, vector1 ** 2))
@@ -123,7 +143,7 @@ def calculate_cosine_similarity(vector1, vector2, weights):
         return 0
     return weighted_dot_product / (weighted_magnitude1 * weighted_magnitude2)
 
-
+# Not used
 def get_answer_values(from_student_answer, to_student_answer):
     data_type = from_student_answer.item.data_type
     if data_type == "number":
@@ -158,17 +178,17 @@ def get_answer_values(from_student_answer, to_student_answer):
             return len(set(from_answer_array)), len(set(to_answer_array))
     return None, None
 
-
+# Not used
 def date_difference_in_days(date_string):
     date = arrow.get(date_string)
     return (date - arrow.get('1970-01-01')).total_seconds() / 86400
 
-
+# Not used
 def time_difference_in_seconds(time_string):
     time = arrow.get(time_string, "HH:mm:ss")
     return time.hour * 3600 + time.minute * 60 + time.second
 
-
+# Not used
 def get_questionnaire_answer_by_item_id(item_id, questionnaire_answers):
     for questionnaire_answer in questionnaire_answers:
         if questionnaire_answer.item_id == item_id:
