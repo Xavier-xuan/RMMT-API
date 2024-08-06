@@ -10,7 +10,10 @@ from sqlalchemy.orm import joinedload
 import config
 from models import *
 
-from text2vec import cos_sim
+from text2vec import cos_sim, SentenceModel
+
+
+model = SentenceModel()
 
 def scan_students():
     if not is_in_calculating_time():
@@ -88,21 +91,32 @@ def get_score(from_student, to_student):
     
     i = 0 # to_student_questionnaire_answers index
     j = 0 # from_student_questionnaire_answers index
+    changes = False
     while i < len(to_student_questionnaire_answers) and j < len(from_student_questionnaire_answers):
         to_student_answer = to_student_questionnaire_answers[i]
         from_student_answer = from_student_questionnaire_answers[j]
-        # output("type: {}, to_student_answer: {}, from_student_answer: {}".format(type(to_student_answer.vector), to_student_answer.vector, from_student_answer.vector))
-        to_student_answer_vector = np.array(json.loads(to_student_answer.vector))
-        from_student_answer_vector = np.array(json.loads(from_student_answer.vector))
-        
         if to_student_answer.item_id == from_student_answer.item_id:
             i += 1
             j += 1
+
             if to_student_answer.weight <= 0:
                 continue
+
+            if to_student_answer.vector is None or len(to_student_answer.vector) < 1:
+                to_student_answer.vector = json.dumps(model.encode(to_student_answer.answer).tolist())
+                changes = True
+
+            if from_student_answer.vector is None or len(from_student_answer.vector) < 1:
+                from_student_answer.vector = json.dumps(model.encode(from_student_answer.answer).tolist())
+                changes = True
+
+            to_student_answer_vector = np.array(json.loads(to_student_answer.vector))
+            from_student_answer_vector = np.array(json.loads(from_student_answer.vector))
+
             value = cos_sim(to_student_answer_vector, from_student_answer_vector)
             value = value.item()
             question_match[to_student_answer.item_id] = (value, to_student_answer.weight)
+
         elif to_student_answer.item_id < from_student_answer.item_id:
             i += 1
         else:
@@ -115,6 +129,9 @@ def get_score(from_student, to_student):
     # 将余弦相似度转换为分数（0-100）
     score = cosine_similarity * 100
     output("score: {}".format(score))
+
+    if changes:
+        db_session.commit()
     return score
 
 # Not used
