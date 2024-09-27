@@ -3,7 +3,7 @@ from copy import deepcopy
 
 import bcrypt
 from flask import jsonify
-from sqlalchemy import Column, DateTime, ForeignKey, String, TIMESTAMP, Text, text
+from sqlalchemy import Column, DateTime, ForeignKey, String, TIMESTAMP, Text, text, BLOB
 from sqlalchemy.dialects.mysql import BIGINT, INTEGER, TINYINT, DOUBLE
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -321,7 +321,7 @@ class QuestionnaireAnswer(Base, SerializerMixin):
     updated_at = Column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
     student_id = Column(ForeignKey('students.id', ondelete='CASCADE', onupdate='CASCADE'), index=True)
     weight = Column(DOUBLE(), nullable=False, server_default=text("'1'"))
-
+    vector = Column(Text) # 用来存储Embedding向量
     item = relationship('QuestionnaireItem', order_by="asc(QuestionnaireItem.index)",
                         primaryjoin='QuestionnaireItem.id == QuestionnaireAnswer.item_id', lazy='joined')
 

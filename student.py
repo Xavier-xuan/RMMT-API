@@ -9,9 +9,8 @@ from sqlalchemy.orm import joinedload
 from database import db_session
 from models import Student, QuestionnaireItem, QuestionnaireAnswer, MatchingScore, Team, TeamInvitation, \
     TeamRequest, get_system_setting
-
+    
 student_pages = Blueprint('student_pages', __name__, template_folder="templates/student")
-
 
 def student_required():
     def wrapper(fn):
@@ -218,12 +217,14 @@ def questionnaire_set_answers():
                         exist_answer.answer = str(value['answer'])
                         exist_answer.weight = value['weight']
                         exist_answer.updated_at = datetime.datetime.now()
+                        # exist_answer.vector = json.dumps(model.encode(exist_answer.answer).tolist())
+                        exist_answer.vector = None
                         db_session.commit()
                         data_changed = True
 
             if need_to_create:
                 new_answer = QuestionnaireAnswer(item_id=key, answer=str(value['answer']), student_id=current_user.id,
-                                                 weight=value['weight'])
+                                                 weight=value['weight'], vector=None)
                 bulk_save_models.append(new_answer)
                 data_changed = True
 
