@@ -6,8 +6,7 @@ import bcrypt
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, verify_jwt_in_request, get_jwt, current_user
 from sqlalchemy.orm import joinedload
-from sqlalchemy import or_
-
+from sqlalchemy import or_, func
 
 from database import db_session
 from models import Admin, Student, Team, ExchangingNeed, CustomQuestionnaireItem, SystemSetting, QuestionnaireItem, \
@@ -115,18 +114,41 @@ def change_password():
 @admin_pages.get("/student/list")
 @admin_required()
 def student_list():
-    students = db_session.query(Student).options(
-        joinedload(Student.team), joinedload(Student.questionnaire_answers)).group_by(Student).all()
+    students = (
+        db_session.query(
+            Student.id,
+            Student.name,
+            Student.last_logged_at,
+            Student.gender,
+            Student.created_at,
+            Student.team_id,
+            Team.id.label("team_id"),
+            Team.description.label("team_description"),
+            func.count(QuestionnaireAnswer.id).label("answers_count")
+        )
+        .outerjoin(Team)  # Explicit join with Team
+        .outerjoin(QuestionnaireAnswer)  # Outer join with QuestionnaireAnswers, only if answers need to be counted
+        .group_by(Student.id, Team.id)
+        .all()
+    )
 
     return jsonify({
         "code": 200,
         "msg": "success",
         "data": {
-            "students": [student.to_dict(
-                only=['id', 'name', 'team.id', 'team.description', 'last_logged_at', 'gender', 'created_at',
-                      'has_answered_questionnaire', 'team_id'])
-                for student in
-                students]
+            "students": [{
+                "id": student.id,
+                "name": student.name,
+                "team": {
+                    "id": student.team_id,
+                    "description": student.team_description
+                } if student.team_id else None,
+                "last_logged_at": student.last_logged_at,
+                "gender": student.gender,
+                "created_at": student.created_at,
+                "has_answered_questionnaire": student.answers_count > 0,
+                "team_id": student.team_id
+            } for student in students]
         }
     })
 
