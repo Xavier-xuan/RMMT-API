@@ -6,6 +6,7 @@ ARG NAME
 
 ENV NAME=${NAME}
 ENV PIP_SOURCE="https://pypi.tuna.tsinghua.edu.cn/simple"
+ENV HF_ENDPOINT=https://hf-mirror.com
 
 # 设置工作目录
 WORKDIR /app
@@ -17,7 +18,6 @@ COPY requirements.txt ./
 RUN pip install -i ${PIP_SOURCE} --no-cache-dir -r requirements.txt
 RUN pip install -i ${PIP_SOURCE} gunicorn
 RUN pip install -i ${PIP_SOURCE} gevent
-RUN export HF_ENDPOINT=https://hf-mirror.com
 RUN pip uninstall -y text2vec
 RUN pip install -U text2vec
 
