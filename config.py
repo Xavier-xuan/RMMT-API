@@ -1,6 +1,5 @@
 from datetime import timedelta
 
-
 class GeneralConfig:
     DATABASE_URL = "mysql+pymysql://root:@127.0.0.1:3306/roommate"
     JWT_SECRET_KEY = "R2xpmzp1F9QcpHn9"

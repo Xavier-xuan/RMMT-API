@@ -13,7 +13,6 @@ from database import db_session
 
 Base = declarative_base()
 
-
 class Admin(Base, SerializerMixin):
     __tablename__ = 'admins'
 
@@ -79,10 +78,10 @@ class Student(Base, SerializerMixin):
     created_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
     last_logged_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
     name = Column(String(64), nullable=False)
-    QQ = Column(Text)
-    Wechat = Column(Text)
-    Phone = Column(Text)
+    qq = Column(Text)
+    wechat = Column(Text)
     mbti = Column(String(4))
+    province = Column(Text)
 
     custom_questionnaire_items = relationship('CustomQuestionnaireItem', backref="student")
     custom_questionnaire_answers = relationship('CustomQuestionnaireAnswer', backref="student")

@@ -22,7 +22,11 @@ app.register_blueprint(admin_pages, url_prefix="/api/admin")
 app.register_blueprint(student_pages, url_prefix="/api/student")
 
 # 跨域支持
-CORS(app, supports_credentials=True, expose_headers=['Refresh-Access-Token'])
+CORS(
+    app,
+    supports_credentials=True, 
+    expose_headers=['Refresh-Access-Token']
+)
 
 
 @app.teardown_appcontext
