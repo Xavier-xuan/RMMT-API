@@ -1,7 +1,7 @@
 # Roommate Matcher
 
 <p align="center">
-  <img src="https://xavier-xuan.github.io/RMMT-Doc/logo.svg" alt="Roommate Matcher Logo">
+  <img src="https://zhixin-college.github.io/RMMT-Doc/logo.svg" alt="Roommate Matcher Logo">
 </p>
 
 **Roommate Matcher** is a questionnaire-based roommate recommendation system developed for freshmen. This system aims to facilitate the process of finding compatible roommates through a detailed questionnaire analysis. Learn more on our [project homepage](https://xavier-xuan.github.io/RMMT-Doc/).
