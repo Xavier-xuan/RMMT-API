@@ -10,11 +10,11 @@
 
 This project is divided into three main components, each housed in its own repository:
 
-- **[RMMT-API](https://github.com/Xavier-xuan/RMMT-API)**: The backend API, handling data processing, user authentication, and server-side logic.
+- **[RMMT-API](https://github.com/ZhiXin-College/RMMT-API)**: The backend API, handling data processing, user authentication, and server-side logic.
 
-- **[RMMT-Student](https://github.com/Xavier-xuan/RMMT-Student)**: The frontend interface for students, providing a user-friendly environment to fill out questionnaires and view matches.
+- **[RMMT-Student](https://github.com/ZhiXin-College/RMMT-Student)**: The frontend interface for students, providing a user-friendly environment to fill out questionnaires and view matches.
 
-- **[RMMT-Admin](https://github.com/Xavier-xuan/RMMT-Admin)**: The administrative interface for system administrators to manage users, view statistics, and configure system settings.
+- **[RMMT-Admin](https://github.com/ZhiXin-College/RMMT-Admin)**: The administrative interface for system administrators to manage users, view statistics, and configure system settings.
 
 ## Contributing
 
