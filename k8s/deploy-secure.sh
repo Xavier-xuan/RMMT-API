@@ -32,33 +32,33 @@ echo -e "${BLUE}📋 部署步骤：${NC}"
 
 # 1. 创建命名空间
 echo -e "${YELLOW}1️⃣ 创建命名空间...${NC}"
-kubectl apply -f k8s/namespace.yaml
+kubectl apply -f ./namespace.yaml
 
 # 2. 创建基础配置
 echo -e "${YELLOW}2️⃣ 创建基础配置...${NC}"
-kubectl apply -f k8s/configmap.yaml
-kubectl apply -f k8s/secret.yaml
+kubectl apply -f ./configmap.yaml
+kubectl apply -f ./secret.yaml
 
 # 3. 创建安全配置
 echo -e "${YELLOW}3️⃣ 创建安全配置...${NC}"
-kubectl apply -f k8s/network-policy.yaml
-kubectl apply -f k8s/pod-security-policy.yaml
-kubectl apply -f k8s/waf-configmap.yaml
-kubectl apply -f k8s/security-monitoring.yaml
+kubectl apply -f ./network-policy.yaml
+kubectl apply -f ./pod-security-policy.yaml
+kubectl apply -f ./waf-configmap.yaml
+kubectl apply -f ./security-monitoring.yaml
 
 # 4. 部署应用
 echo -e "${YELLOW}4️⃣ 部署应用...${NC}"
-kubectl apply -f k8s/rmmt-db-deployment.yaml
-kubectl apply -f k8s/rmmt-api-deployment.yaml
-kubectl apply -f k8s/rmmt-api-service.yaml
-kubectl apply -f k8s/rmmt-student-deployment.yaml
-kubectl apply -f k8s/rmmt-student-service.yaml
-kubectl apply -f k8s/rmmt-admin-deployment.yaml
-kubectl apply -f k8s/rmmt-admin-service.yaml
+kubectl apply -f ./rmmt-db-deployment.yaml
+kubectl apply -f ./rmmt-api-deployment.yaml
+kubectl apply -f ./rmmt-api-service.yaml
+kubectl apply -f ./rmmt-student-deployment.yaml
+kubectl apply -f ./rmmt-student-service.yaml
+kubectl apply -f ./rmmt-admin-deployment.yaml
+kubectl apply -f ./rmmt-admin-service.yaml
 
 # 5. 部署安全Ingress
 echo -e "${YELLOW}5️⃣ 部署安全Ingress...${NC}"
-kubectl apply -f k8s/ingress-secure.yaml
+kubectl apply -f ./ingress-secure.yaml
 
 # 等待部署完成
 echo -e "${YELLOW}⏳ 等待部署完成...${NC}"
