@@ -1,0 +1,123 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rmmt-waf-config
+  namespace: rmmt
+data:
+  # ModSecurity规则
+  modsecurity.conf: |
+    SecRuleEngine On
+    SecRequestBodyAccess On
+    SecRequestBodyLimit 13107200
+    SecRequestBodyNoFilesLimit 131072
+    SecRequestBodyInMemoryLimit 131072
+    SecRequestBodyLimitAction Reject
+    SecRule REQUEST_HEADERS:Content-Type "text/xml" \
+      "id:'200000',phase:1,t:none,t:lowercase,pass,nolog,ctl:requestBodyProcessor=XML"
+    SecRule REQBODY_ERROR "!@eq 0" \
+      "id:'200001',phase:2,t:none,log,deny,status:400,msg:'Failed to parse request body.',logdata:'%{reqbody_error_msg}'"
+    SecRule XML "@gt 0" \
+      "id:'200002',phase:2,t:none,t:lowercase,log,block,msg:'XML payload detected.'"
+    SecRule REQUEST_HEADERS:Content-Type "text/xml" \
+      "id:'200003',phase:2,t:none,t:lowercase,log,block,msg:'XML payload detected.'"
+    
+    # SQL注入防护
+    SecRule ARGS|ARGS_NAMES "@detectSQLi" \
+      "id:'942100',phase:2,block,msg:'SQL Injection Attack Detected via libinjection',logdata:'Matched Data: %{MATCHED_VAR} found within %{MATCHED_VAR_NAME}: %{MATCHED_VAR}'"
+    
+    # XSS防护
+    SecRule ARGS|ARGS_NAMES "@detectXSS" \
+      "id:'941100',phase:2,block,msg:'XSS Attack Detected via libinjection',logdata:'Matched Data: %{MATCHED_VAR} found within %{MATCHED_VAR_NAME}: %{MATCHED_VAR}'"
+    
+    # 路径遍历防护
+    SecRule ARGS|ARGS_NAMES "@contains ../" \
+      "id:'930100',phase:2,block,msg:'Path Traversal Attack Detected',logdata:'Matched Data: %{MATCHED_VAR} found within %{MATCHED_VAR_NAME}: %{MATCHED_VAR}'"
+    
+    # 文件上传防护
+    SecRule FILES|FILES_NAMES "@contains .php" \
+      "id:'950100',phase:2,block,msg:'PHP file upload detected',logdata:'Matched Data: %{MATCHED_VAR} found within %{MATCHED_VAR_NAME}: %{MATCHED_VAR}'"
+    
+    # 恶意User-Agent
+    SecRule REQUEST_HEADERS:User-Agent "@pmFromFile malicious-user-agents.data" \
+      "id:'913100',phase:1,block,msg:'Malicious User-Agent detected',logdata:'Matched Data: %{MATCHED_VAR} found within %{MATCHED_VAR_NAME}: %{MATCHED_VAR}'"
+  
+  # 恶意User-Agent列表
+  malicious-user-agents.data: |
+    sqlmap
+    nikto
+    nmap
+    nessus
+    acunetix
+    burp
+    owasp
+    w3af
+    skipfish
+    dirb
+    gobuster
+    dirbuster
+    hydra
+    medusa
+    john
+    hashcat
+    aircrack
+    kismet
+    metasploit
+    empire
+    cobalt
+    bloodhound
+    mimikatz
+    powersploit
+    impacket
+    responder
+    crackmapexec
+    evil-winrm
+    psexec
+    wmic
+    wmiexec
+    smbexec
+    atexec
+    sc
+    net
+    ipconfig
+    whoami
+    systeminfo
+    tasklist
+    netstat
+    route
+    arp
+    nslookup
+    ping
+    tracert
+    telnet
+    ftp
+    tftp
+    rsh
+    rlogin
+    rexec
+    finger
+    rwho
+    ruptime
+    rstat
+    rup
+    rusers
+    rwall
+    rsh
+    rlogin
+    rexec
+    finger
+    rwho
+    ruptime
+    rstat
+    rup
+    rusers
+    rwall
+    rsh
+    rlogin
+    rexec
+    finger
+    rwho
+    ruptime
+    rstat
+    rup
+    rusers
+    rwall

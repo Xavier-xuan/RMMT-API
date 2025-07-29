@@ -1,0 +1,122 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rmmt-security-monitoring
+  namespace: rmmt
+data:
+  # Prometheus告警规则
+  security-alerts.yaml: |
+    groups:
+    - name: security
+      rules:
+      - alert: HighRateLimitViolations
+        expr: rate(nginx_ingress_controller_nginx_process_connections{namespace="rmmt"}[5m]) > 100
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High rate limit violations detected"
+          description: "Rate limit violations are above threshold for {{ $labels.instance }}"
+      
+      - alert: SQLInjectionAttempt
+        expr: increase(nginx_ingress_controller_nginx_process_connections{namespace="rmmt"}[5m]) > 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SQL injection attempt detected"
+          description: "Possible SQL injection attempt on {{ $labels.instance }}"
+      
+      - alert: XSSAttackAttempt
+        expr: increase(nginx_ingress_controller_nginx_process_connections{namespace="rmmt"}[5m]) > 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "XSS attack attempt detected"
+          description: "Possible XSS attack attempt on {{ $labels.instance }}"
+      
+      - alert: UnauthorizedAccess
+        expr: increase(nginx_ingress_controller_nginx_process_connections{namespace="rmmt"}[5m]) > 50
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Unauthorized access attempts detected"
+          description: "Multiple unauthorized access attempts on {{ $labels.instance }}"
+      
+      - alert: DDoSAttack
+        expr: rate(nginx_ingress_controller_nginx_process_connections{namespace="rmmt"}[1m]) > 1000
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "DDoS attack detected"
+          description: "Possible DDoS attack on {{ $labels.instance }}"
+  
+  # 日志分析规则
+  log-analysis.conf: |
+    # 检测异常访问模式
+    filter {
+      if [type] == "nginx-access" {
+        grok {
+          match => { "message" => "%{COMBINEDAPACHELOG}" }
+        }
+        
+        # 检测异常状态码
+        if [response] == "404" or [response] == "403" or [response] == "500" {
+          mutate {
+            add_tag => [ "security_alert" ]
+          }
+        }
+        
+        # 检测异常User-Agent
+        if [agent] =~ /(sqlmap|nikto|nmap|nessus|acunetix|burp|owasp|w3af|skipfish|dirb|gobuster|dirbuster|hydra|medusa|john|hashcat|aircrack|kismet|metasploit|empire|cobalt|bloodhound|mimikatz|powersploit|impacket|responder|crackmapexec|evil-winrm|psexec|wmic|wmiexec|smbexec|atexec|sc|net|ipconfig|whoami|systeminfo|tasklist|netstat|route|arp|nslookup|ping|tracert|telnet|ftp|tftp|rsh|rlogin|rexec|finger|rwho|ruptime|rstat|rup|rusers|rwall)/ {
+          mutate {
+            add_tag => [ "malicious_agent" ]
+          }
+        }
+        
+        # 检测异常请求路径
+        if [request] =~ /(\.\.|\.\.\/|\.\.\\|\.\.%2f|\.\.%5c|union|select|insert|update|delete|drop|create|alter|exec|eval|system|cmd|shell|script|javascript|vbscript|onload|onerror|onclick)/ {
+          mutate {
+            add_tag => [ "malicious_request" ]
+          }
+        }
+        
+        # 检测异常请求频率
+        if [clientip] {
+          aggregate {
+            task_id => "%{clientip}"
+            code => "map['count'] ||= 0; map['count'] += 1; map['last_seen'] = event.get('@timestamp')"
+            map_action => "create"
+          }
+          
+          if [aggregate][count] > 100 {
+            mutate {
+              add_tag => [ "rate_limit_exceeded" ]
+            }
+          }
+        }
+      }
+    }
+    
+    # 告警输出
+    output {
+      if "security_alert" in [tags] or "malicious_agent" in [tags] or "malicious_request" in [tags] or "rate_limit_exceeded" in [tags] {
+        elasticsearch {
+          hosts => ["elasticsearch:9200"]
+          index => "security-alerts-%{+YYYY.MM.dd}"
+        }
+        
+        # 发送到Slack或其他通知系统
+        http {
+          url => "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+          http_method => "post"
+          format => "json"
+          mapping => {
+            "text" => "Security Alert: %{[tags]} - %{[clientip]} - %{[request]}"
+          }
+        }
+      }
+    }

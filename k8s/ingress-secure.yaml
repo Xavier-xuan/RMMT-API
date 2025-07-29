@@ -1,0 +1,135 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rmmt-ingress-secure
+  namespace: rmmt
+  annotations:
+    # 基本重写规则
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    
+    # 安全防护配置
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    
+    # 速率限制
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/rate-limit-rps: "10"
+    
+    # 连接限制
+    nginx.ingress.kubernetes.io/connection-proxy-header: "keep-alive"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    
+    # 请求大小限制
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "4k"
+    
+    # 安全头
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      # 阻止常见攻击
+      if ($request_method !~ ^(GET|POST|PUT|DELETE|OPTIONS)$) {
+        return 444;
+      }
+      
+      # 阻止恶意User-Agent
+      if ($http_user_agent ~* (bot|crawler|spider|scraper|curl|wget|python|java|php)) {
+        return 403;
+      }
+      
+      # 阻止SQL注入尝试
+      if ($request_uri ~* (union|select|insert|update|delete|drop|create|alter|exec|eval|system|cmd|shell)) {
+        return 403;
+      }
+      
+      # 阻止XSS攻击
+      if ($request_uri ~* (<script|javascript:|vbscript:|onload=|onerror=|onclick=)) {
+        return 403;
+      }
+      
+      # 阻止路径遍历攻击
+      if ($request_uri ~* (\.\.|\.\./|\.\.\\|\.\.%2f|\.\.%5c)) {
+        return 403;
+      }
+      
+      # 添加安全头
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+      add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'self';" always;
+      add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    
+    # 白名单IP（可选）
+    nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    
+    # 证书管理
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    
+    # 地理位置限制（可选）
+    nginx.ingress.kubernetes.io/geoip2: |
+      geoip2 /etc/nginx/geoip/GeoLite2-Country.mmdb {
+        auto_reload 5m;
+        $geoip2_metadata_country_build metadata build_epoch;
+        $geoip2_data_country_code default=US source=$remote_addr country iso_code;
+        $geoip2_data_country_name default=United States source=$remote_addr country names en;
+      }
+    
+    # 地理位置限制规则
+    nginx.ingress.kubernetes.io/server-snippet: |
+      # 只允许特定国家访问（可选）
+      # if ($geoip2_data_country_code != "CN" && $geoip2_data_country_code != "US") {
+      #   return 403;
+      # }
+      
+      # 限制请求频率
+      limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
+      limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
+      
+      # 限制连接数
+      limit_conn_zone $binary_remote_addr zone=conn_limit_per_ip:10m;
+      limit_conn conn_limit_per_ip 10;
+
+spec:
+  tls:
+  - hosts:
+    - student.jaredanjerry.top
+    - admin.jaredanjerry.top
+    - api.jaredanjerry.top
+    secretName: rmmt-tls
+  rules:
+  - host: student.jaredanjerry.top
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: rmmt-student
+            port:
+              number: 80
+  - host: admin.jaredanjerry.top
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: rmmt-admin
+            port:
+              number: 80
+  - host: api.jaredanjerry.top
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: rmmt-api
+            port:
+              number: 80

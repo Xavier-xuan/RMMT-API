@@ -1,0 +1,220 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rmmt-network-policy
+  namespace: rmmt
+spec:
+  podSelector:
+    matchLabels:
+      app: rmmt-api
+  
+  # 入站规则
+  ingress:
+  # 允许前端访问API
+  - from:
+    - podSelector:
+        matchLabels:
+          app: rmmt-student
+    - podSelector:
+        matchLabels:
+          app: rmmt-admin
+    ports:
+    - protocol: TCP
+      port: 5000
+  
+  # 允许Ingress访问
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 5000
+  
+  # 出站规则
+  egress:
+  # 允许访问数据库
+  - to:
+    - podSelector:
+        matchLabels:
+          app: rmmt-db
+    ports:
+    - protocol: TCP
+      port: 3306
+  
+  # 允许DNS查询
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  
+  # 允许访问K8s API
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  
+  # 允许访问外部HTTPS服务
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  
+  # 允许访问外部HTTP服务（如果需要）
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 80
+  
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rmmt-student-network-policy
+  namespace: rmmt
+spec:
+  podSelector:
+    matchLabels:
+      app: rmmt-student
+  
+  # 入站规则
+  ingress:
+  # 允许Ingress访问
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 80
+  
+  # 出站规则
+  egress:
+  # 允许访问API
+  - to:
+    - podSelector:
+        matchLabels:
+          app: rmmt-api
+    ports:
+    - protocol: TCP
+      port: 5000
+  
+  # 允许DNS查询
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  
+  # 允许访问外部HTTPS服务
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  
+  # 允许访问外部HTTP服务
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 80
+  
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rmmt-admin-network-policy
+  namespace: rmmt
+spec:
+  podSelector:
+    matchLabels:
+      app: rmmt-admin
+  
+  # 入站规则
+  ingress:
+  # 允许Ingress访问
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 80
+  
+  # 出站规则
+  egress:
+  # 允许访问API
+  - to:
+    - podSelector:
+        matchLabels:
+          app: rmmt-api
+    ports:
+    - protocol: TCP
+      port: 5000
+  
+  # 允许DNS查询
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  
+  # 允许访问外部HTTPS服务
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  
+  # 允许访问外部HTTP服务
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 80
+  
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rmmt-db-network-policy
+  namespace: rmmt
+spec:
+  podSelector:
+    matchLabels:
+      app: rmmt-db
+  
+  # 入站规则
+  ingress:
+  # 允许API访问数据库
+  - from:
+    - podSelector:
+        matchLabels:
+          app: rmmt-api
+    ports:
+    - protocol: TCP
+      port: 3306
+  
+  # 出站规则
+  egress:
+  # 允许DNS查询
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  
+  policyTypes:
+  - Ingress
+  - Egress

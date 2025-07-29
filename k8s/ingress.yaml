@@ -1,0 +1,48 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rmmt-ingress
+  namespace: rmmt
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - student.jaredanjerry.top
+    - admin.jaredanjerry.top
+    - api.jaredanjerry.top
+    secretName: rmmt-tls
+  rules:
+  - host: student.jaredanjerry.top
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: rmmt-student
+            port:
+              number: 80
+  - host: admin.jaredanjerry.top
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: rmmt-admin
+            port:
+              number: 80
+  - host: api.jaredanjerry.top
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: rmmt-api
+            port:
+              number: 80

@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: rmmt
+
+resources:
+  # 基础配置
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  
+  # 安全配置
+  - ingress-secure.yaml
+  - network-policy.yaml
+  - pod-security-policy.yaml
+  - waf-configmap.yaml
+  - security-monitoring.yaml
+  
+  # 应用部署
+  - rmmt-api-deployment.yaml
+  - rmmt-api-service.yaml
+  - rmmt-student-deployment.yaml
+  - rmmt-student-service.yaml
+  - rmmt-admin-deployment.yaml
+  - rmmt-admin-service.yaml
+  - rmmt-db-deployment.yaml
+  - rmmt-db-service.yaml
+
+commonLabels:
+  app: roommate-matcher
+  version: v1.0.0
+  security: enabled

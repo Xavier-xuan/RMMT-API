@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rmmt-admin
+  namespace: rmmt
+  labels:
+    app: rmmt-admin
+spec:
+  selector:
+    app: rmmt-admin
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+  type: ClusterIP
