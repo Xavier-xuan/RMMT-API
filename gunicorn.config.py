@@ -6,4 +6,4 @@ errorlog = './log/error.log'
 workers = 4
 # 设置工作模式为协程
 worker_class = "gevent"
-bind = "0.0.0.0:5001"
+bind = "0.0.0.0:5000"
