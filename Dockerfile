@@ -24,6 +24,10 @@ RUN pip install -U text2vec
 # 复制应用代码到镜像中的 /app 目录
 COPY . /app
 
+# 修改时区
+RUN mv /etc/localtime localtime.bak
+RUN ln -s /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+
 EXPOSE 5000
 
 # 设置入口点
