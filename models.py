@@ -4,7 +4,7 @@ from copy import deepcopy
 import bcrypt
 from flask import jsonify
 from sqlalchemy import Column, DateTime, ForeignKey, String, TIMESTAMP, Text, text, BLOB
-from sqlalchemy.dialects.mysql import BIGINT, INTEGER, TINYINT, DOUBLE
+from sqlalchemy.dialects.mysql import BIGINT, INTEGER, TINYINT, DOUBLE, LONGTEXT
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy_serializer import SerializerMixin
@@ -46,7 +46,7 @@ class SystemSetting(Base, SerializerMixin):
 
     id = Column(INTEGER(11), primary_key=True)
     key = Column(String(255), nullable=False, unique=True)
-    value = Column(Text)
+    value = Column(LONGTEXT)
     created_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
     updated_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
 
