@@ -378,4 +378,38 @@ def set_system_setting(key, value):
 
 if __name__ == "__main__":
     from database import engine
+    import os
+
     Base.metadata.create_all(engine)
+
+    # 默认 system_settings
+    default_settings = {
+        "team_max_student_count": "4",
+        "step_1_start_at": "2023-08-06 00:00:00",
+        "step_1_end_at": "2023-08-11 23:59:59",
+        "step_2_start_at": "2023-08-06 00:00:00",
+        "step_2_end_at": "2023-08-12 00:00:00",
+        "step_3_start_at": "2023-08-06 00:00:00",
+        "step_3_end_at": "2023-08-12 00:00:00",
+        "tips": """1. 填写系统务必真实嗷，同时也要发展性预见自己未来情况填写嗷，这样利于舍友之间长时间相处滴
+2. 不要过于留念自己同学，可能到了大学多多少少会变一点滴，谨慎选择嗷
+3. 系统中奇异值（越小说明和你预期越近）仅供参考，一定要联系舍友了解嗷，毕竟要一起度过大学四年嘛，可不能随意了！
+4. 联系舍友时，也要康康组队中其他室友的情况嗷，聊聊兴趣爱好，聊聊生活作息，如果有机会也可以提前聊聊今后宿舍公约，开个视频会议，大家细细了解都行的。总之，和选书院一样，充分了解，理性选择嗷！
+5. 选宿舍结束时间**8月11日晚23：59分**，请提前联系并确认组队
+6. 同学们没事真的**不要选计算机**啊，计系已经卷死了**卷到我质壁分离**了（来自开发这套系统的学长，仅代表个人观点）。"""
+    }
+
+    # 从外部 JSON 文件读取 questionnaire_json
+    questionnaire_file = os.path.join(os.path.dirname(__file__), "default_questionnaire.json")
+    if os.path.exists(questionnaire_file):
+        with open(questionnaire_file, "r", encoding="utf-8") as f:
+            default_settings["questionnaire_json"] = f.read()
+
+    # 插入默认 system_settings（仅在不存在时插入）
+    for key, value in default_settings.items():
+        if not db_session.query(SystemSetting).filter_by(key=key).first():
+            db_session.add(SystemSetting(key=key, value=value))
+
+    db_session.commit()
+    print("✅ 默认 system_settings 已初始化")
+
