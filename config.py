@@ -17,3 +17,7 @@ class GeneralConfig:
     ASYNC_JOB_SCAN_INTERVAL = int(os.getenv('ASYNC_JOB_SCAN_INTERVAL', '10'))  # in seconds
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=15)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+
+    CAS_SERVER_URL = os.getenv('CAS_SERVER_URL', None)
+    CAS_SERVICE_URL = os.getenv('CAS_SERVICE_URL', None)
+    CAS_REDIRECT_URL = os.getenv('CAS_REDIRECT_URL', None)

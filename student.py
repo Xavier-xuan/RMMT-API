@@ -2,13 +2,17 @@ import datetime
 from functools import wraps
 
 import bcrypt
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, redirect
 from flask_jwt_extended import create_access_token, verify_jwt_in_request, get_jwt, current_user
 from sqlalchemy.orm import joinedload
 
 from database import db_session
 from models import Student, QuestionnaireItem, QuestionnaireAnswer, MatchingScore, Team, TeamInvitation, \
     TeamRequest, get_system_setting
+
+from urllib.parse import urljoin, quote
+from cas import CASClient
+from config import GeneralConfig
     
 student_pages = Blueprint('student_pages', __name__, template_folder="templates/student")
 
@@ -87,6 +91,75 @@ def in_step_3_period():
 
     return wrapper
 
+@student_pages.route('/cas/login')
+def cas_login():
+    """启动CAS登录流程"""
+    # 创建CAS客户端实例
+    cas_client = CASClient(
+        version=3,
+        server_url=GeneralConfig.CAS_SERVER_URL,
+        service_url=GeneralConfig.CAS_SERVER_URL # 使用配置中固定的回调地址
+    )
+    
+    # 直接跳转到CAS登录页面
+    return redirect(cas_client.get_login_url())
+
+
+@student_pages.route('/cas/callback')
+def cas_callback():
+    """统一回调处理（所有状态通过参数传递）"""
+    base_redirect = GeneralConfig.CAS_REDIRECT_URL
+    ticket = request.args.get('ticket')
+
+    # 情况1：缺少ticket参数
+    if not ticket:
+        return redirect(f"{base_redirect}?status=fail&code=400&reason=missing_ticket")
+
+    try:
+        # 验证ticket
+        cas_client = CASClient(
+            version=3,
+            server_url=GeneralConfig.CAS_SERVER_URL,
+            service_url=GeneralConfig.CAS_SERVICE_URL
+        )
+        username, attributes, _ = cas_client.verify_ticket(ticket)
+        
+        # 情况2：ticket验证失败
+        if not username:
+            return redirect(f"{base_redirect}?status=fail&code=401&reason=invalid_ticket")
+
+        # 查找用户
+        student = db_session.query(Student).where(Student.id == username).first()
+        
+        # 情况3：用户不存在
+        if not student:
+            return redirect(
+                f"{base_redirect}?status=fail&code=404"
+                f"&reason=user_not_found&username={quote(username)}"
+            )
+
+        # 成功情况
+        student.last_logged_at = datetime.datetime.now()
+        db_session.commit()
+        
+        token = create_access_token(
+            identity=student.id,
+            additional_headers={"role": "student"},
+            additional_claims={"role": "student"}
+        )
+        
+        return redirect(
+            f"{base_redirect}?status=success"
+            f"&token={token}&username={quote(username)}"
+        )
+
+    except Exception as e:
+        # 情况4：其他异常
+        return redirect(
+            f"{base_redirect}?status=fail&code=500"
+            f"&reason=server_error&msg={quote(str(e))}"
+        )
+       
 
 @student_pages.route('/login', methods=['POST'])
 def login():
