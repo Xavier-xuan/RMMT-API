@@ -18,6 +18,7 @@ class GeneralConfig:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=15)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
 
-    CAS_SERVER_URL = os.getenv('CAS_SERVER_URL', None)
-    CAS_SERVICE_URL = os.getenv('CAS_SERVICE_URL', None)
-    CAS_REDIRECT_URL = os.getenv('CAS_REDIRECT_URL', None)
+    CAS_SERVER_PREFIX   = os.getenv('CAS_SERVER_PREFIX', None)
+    CAS_VALIDATE_PREFIX = os.getenv('CAS_VALIDATE_PREFIX', CAS_SERVER_PREFIX)
+    CAS_SERVICE_URL     = os.getenv('CAS_SERVICE_URL', None)
+    CAS_REDIRECT_URL    = os.getenv('CAS_REDIRECT_URL', None)
