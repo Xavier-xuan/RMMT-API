@@ -97,7 +97,7 @@ def cas_login():
     # 创建CAS客户端实例
     cas_client = CASClient(
         version=2,
-        server_url=GeneralConfig.CAS_SERVER_URL,
+        server_url=GeneralConfig.CAS_SERVER_PREFIX,
         service_url=GeneralConfig.CAS_SERVICE_URL
     )
     
