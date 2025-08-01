@@ -96,9 +96,9 @@ def cas_login():
     """启动CAS登录流程"""
     # 创建CAS客户端实例
     cas_client = CASClient(
-        version=3,
+        version=2,
         server_url=GeneralConfig.CAS_SERVER_URL,
-        service_url=GeneralConfig.CAS_SERVER_URL # 使用配置中固定的回调地址
+        service_url=GeneralConfig.CAS_SERVICE_URL
     )
     
     # 直接跳转到CAS登录页面
@@ -118,8 +118,8 @@ def cas_callback():
     try:
         # 验证ticket
         cas_client = CASClient(
-            version=3,
-            server_url=GeneralConfig.CAS_SERVER_URL,
+            version=2,
+            server_url=GeneralConfig.CAS_VALIDATE_PREFIX,
             service_url=GeneralConfig.CAS_SERVICE_URL
         )
         username, attributes, _ = cas_client.verify_ticket(ticket)
