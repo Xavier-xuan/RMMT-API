@@ -78,7 +78,6 @@ def refresh_expiring_jwts(response):
 
 @app.route('/')
 def hello_world():  # put application's code here
-
     return 'Hello World!'
 
 

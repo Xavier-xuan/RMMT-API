@@ -198,7 +198,7 @@ def userinfo():
         "msg": "success",
         "data": {
             "user": current_user.to_dict(
-                only=['id', 'name', 'gender', 'contact', 'qq', 'wechat', 'province', 'mbti', 'team_id', 'team.id',
+                only=['id', 'name', 'gender', 'category', 'contact', 'qq', 'wechat', 'province', 'mbti', 'team_id', 'team.id',
                       'team.students.id', 'team.students.name',
                       'has_answered_questionnaire'])
         }
@@ -333,7 +333,7 @@ def team_recommend_teammates():
     construct_data = []
     added_student_ids = []
     for piece in recommend_scores:
-        if piece.from_student.gender != current_user.gender:
+        if not (piece.from_student.gender == current_user.gender and piece.from_student.category == current_user.category):
             continue
         item = piece.from_student.to_dict(only=['id', 'name', 'contact', 'qq', 'wechat', 'province', 'mbti'])
         # join load 不能执行关联查询 所以在这里手动过滤
@@ -351,6 +351,7 @@ def team_recommend_teammates():
 
     students_with_no_score = db_session.query(Student) \
         .where(Student.gender == current_user.gender) \
+        .where(Student.category == current_user.category) \
         .where(Student.id.not_in(added_student_ids)) \
         .all()
 
@@ -390,6 +391,12 @@ def team_invite():
                 "code": 400,
                 "msg": "不支持男女混寝"
             })
+            
+        if target_student.category != current_user.category:
+            return jsonify({
+                "code": 400,
+                "msg": "不支持不同专业/培养层次混寝"
+            })
 
         if target_student.team_id is not None:
             return jsonify({
@@ -415,6 +422,12 @@ def team_invite():
                 return jsonify({
                     "code": 400,
                     "msg": "不支持男女混寝"
+                })
+            
+            if team.category != target_student.category:
+                return jsonify({
+                    "code": 400,
+                    "msg": "不支持不同专业/培养层次混寝"
                 })
 
             # 看看满人了没有
@@ -510,6 +523,12 @@ def team_request():
                 return jsonify({
                     "code": 400,
                     "msg": "不支持男女混寝"
+                })
+            
+            if team.category != current_user.category:
+                return jsonify({
+                    "code": 400,
+                    "msg": "不支持不同专业/培养层次混寝"
                 })
 
             # 看看满人了没有
@@ -691,7 +710,7 @@ def team_invitation_process():
             else:
                 if team_invitation.team is None:
                     # 创建请求的时候已经进行性别校验
-                    team = Team(gender=current_user.gender)
+                    team = Team(gender=current_user.gender, category=current_user.category)
                     db_session.add(team)
                     db_session.commit()
 

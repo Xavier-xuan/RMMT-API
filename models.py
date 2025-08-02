@@ -56,6 +56,7 @@ class Team(Base, SerializerMixin):
 
     id = Column(INTEGER(11), primary_key=True)
     gender = Column(TINYINT(4), comment='男1 女2')
+    category = Column(TINYINT(4), comment='请根据实际专业/培养层次情况设置')
     description = Column(Text)
     created_at = Column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
     updated_at = Column(TIMESTAMP, server_default=text("CURRENT_TIMESTAMP"))
@@ -73,6 +74,7 @@ class Student(Base, SerializerMixin):
     id = Column(BIGINT(20), primary_key=True)
     team_id = Column(ForeignKey('teams.id', ondelete='SET NULL', onupdate='CASCADE'), index=True)
     gender = Column(TINYINT(4), comment='男1 女2')
+    category = Column(TINYINT(4), comment='请根据实际专业/培养层次情况设置')
     contact = Column(Text)
     password = Column(String(128), nullable=False)
     created_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
@@ -80,7 +82,7 @@ class Student(Base, SerializerMixin):
     name = Column(String(64), nullable=False)
     qq = Column(Text)
     wechat = Column(Text)
-    mbti = Column(String(4))
+    mbti = Column(Text)
     province = Column(Text)
 
     custom_questionnaire_items = relationship('CustomQuestionnaireItem', backref="student")

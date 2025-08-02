@@ -119,6 +119,7 @@ def student_list():
             Student.name,
             Student.last_logged_at,
             Student.gender,
+            Student.category,
             Student.created_at,
             Student.team_id,
             Team.id.label("team_id"),
@@ -146,7 +147,8 @@ def student_list():
                 "gender": student.gender,
                 "created_at": student.created_at,
                 "has_answered_questionnaire": student.answers_count > 0,
-                "team_id": student.team_id
+                "team_id": student.team_id,
+                "category": student.category
             } for student in students]
         }
     })
@@ -163,9 +165,9 @@ def student_import():
         for student in copy.deepcopy(students):
             # 导入时要把学生姓名里的空格替换为#
             space_count = student.split()
-            if len(space_count) != 4:
+            if len(space_count) != 5:
                 continue
-            id, name, gender, password = space_count
+            id, name, gender, category, password = space_count
             id = int(id)
 
             # 查重
@@ -178,7 +180,7 @@ def student_import():
             name = name.replace("#", " ")
             password = bcrypt.hashpw(bytes(password, encoding="utf8"), bcrypt.gensalt())
             data_to_store.append(
-                Student(id=id, name=name, gender=gender, password=password, last_logged_at=None)
+                Student(id=id, name=name, gender=gender, category=category, password=password, last_logged_at=None)
             )
 
         db_session.bulk_save_objects(data_to_store)
@@ -569,7 +571,7 @@ def system_reset():
 def team_list():
     teams = db_session.query(Team).options(joinedload(Team.students)).all()
 
-    teams = [team.to_dict(only=['id', 'gender', 'description', 'created_at', 'students.id', 'students.name']) for team
+    teams = [team.to_dict(only=['id', 'gender', 'category', 'description', 'created_at', 'students.id', 'students.name']) for team
              in teams]
     return jsonify({
         "code": 200,
