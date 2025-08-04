@@ -707,8 +707,9 @@ def team_create():
     if request.json is not None:
         description = request.json.get("description", None)
         gender = request.json.get("gender", 1)
-
-        team = Team(description=description, gender=gender)
+        category = request.json.get("category", None)
+        
+        team = Team(description=description, gender=gender, category=category)
 
         db_session.add(team)
         db_session.commit()
