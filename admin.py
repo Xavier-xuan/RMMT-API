@@ -211,6 +211,7 @@ def student_update():
         gender = request.json.get('gender')
         password = request.json.get('password', None)
         team_id = request.json.get('team_id', None)
+        category = request.json.get('category', None)
         student = db_session.query(Student).get(student_id)
 
         if student is not None:
@@ -221,6 +222,8 @@ def student_update():
             student.name = name
             student.contact = contact
             student.gender = gender
+            if category is not None:
+                student.category = category
 
             if password is not None:
                 hashed_password = bcrypt.hashpw(bytes(password, encoding='utf8'), bcrypt.gensalt())
