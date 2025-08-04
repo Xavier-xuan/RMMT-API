@@ -261,7 +261,7 @@ def student_info():
                 "msg": "success",
                 "data": {
                     "student": student.to_dict(only=[
-                        'id', 'name', 'last_logged_at', 'contact', 'team_id', 'questionnaire_answers', 'gender',
+                        'id', 'name', 'last_logged_at', 'contact', 'qq', 'wechat', 'province', 'mbti', 'category', 'team_id', 'questionnaire_answers', 'gender',
                         'team.students.name', 'team.students.id', 'team.description', 'team_requests.id',
                         'team_requests.team_id'
                     ])
